@@ -1,0 +1,15 @@
+{
+    "name": "bullet-train/bullet-train-php-client",
+    "authors": [
+        {
+            "name": "Ben Rometsch",
+            "email": "ben.rometsch@bullet-train.io"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "BulletTrain\\": "src"
+        }
+    }
+}
