@@ -1,7 +1,7 @@
 {
     "name": "bullettrainhq/bullet-train-php-client",
     "type": "library",
-    "license": "BSD-3",
+    "license": "BSD-3-Clause",
     "authors": [
         {
             "name": "Ben Rometsch",
