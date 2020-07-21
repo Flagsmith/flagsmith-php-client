@@ -1,7 +1,8 @@
 <img width="100%" src="https://raw.githubusercontent.com/SolidStateGroup/bullet-train-frontend/master/hero.png"/>
 
 # Bullet Train Client
-The SDK clients for Ruby [https://bullet-train.io/](https://www.bullet-train.io/). Bullet Train allows you to manage feature flags and remote config across multiple projects, environments and organisations.
+
+The SDK clients for php [https://bullet-train.io/](https://www.bullet-train.io/). Bullet Train allows you to manage feature flags and remote config across multiple projects, environments and organisations.
 
 ## Getting Started
 
@@ -9,30 +10,19 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Installing
 
-### VIA gem
-```gem install bullet-train-client```
-	
+### VIA composer
+
+```php```
+
 ## Usage
-**Retrieving feature flags for your project**
 
-**For full documentation visit [https://docs.bullet-train.io](https://docs.bullet-train.io)**
-```ruby
-require "bullet-train-ruby-client"
+Retrieving feature flags for your project. For full documentation visit [https://docs.bullet-train.io](https://docs.bullet-train.io).
 
-bt = BulletTrain.new("<<Your API KEY>>")
-
-if bt.getValue("font_size")
-  #    Do something awesome with the font size
-end
-
-if bt.hasFeature("does_not_exist")
-  #do something
-else
-  #do nothing, or something else
-end
-
+```php
+efewf
 ```
-**Available Options**
+
+### Available Options
 
 | Property        | Description           | Required  | Default Value  |
 | ------------- |:-------------:| -----:| -----:|
@@ -41,7 +31,7 @@ end
 | ```defaultFlags```     | Defines the default flags if there are any | **NO** | null
 | ```api```     | Use this property to define where you're getting feature flags from, e.g. if you're self hosting. |  **NO** | https://bullet-train-api.dokku1.solidstategroup.com/api/v1/
 
-**Available Functions**
+### Available Functions
 
 | Property        | Description |         
 | ------------- |:-------------:|
@@ -54,11 +44,10 @@ end
 | ```getFlagsForUser(1234)```     | Trigger a manual fetch of the environment features with a given user id
 
 
-**Identifying users**
+### Identifying users
 
 Identifying users allows you to target specific users from the [Bullet Train dashboard](https://www.bullet-train.io/).
 You can include an optional user identifier as part of the `hasFeature` and `getValue` methods to retrieve unique user flags and variables.
-
 
 ## Contributing
 
@@ -70,7 +59,7 @@ If you encounter a bug or feature request we would like to hear about it. Before
 
 ## Get in touch
 
-If you have any questions about our projects you can email <a href="mailto:projects@solidstategroup.com">projects@solidstategroup.com</a>.
+If you have any questions about our projects you can email <a href="mailto:support@bullet-train.io">support@bullet-train.io</a>.
 
 ## Useful links
 
@@ -78,6 +67,6 @@ If you have any questions about our projects you can email <a href="mailto:proje
 
 [Documentation](https://docs.bullet-train.io/)
 
-[Code Examples](https://github.com/SolidStateGroup/bullet-train-docs)
+[Code Examples](https://github.com/BulletTrainHQ/bullet-train-docs)
 
 [Youtube Tutorials](https://www.youtube.com/channel/UCki7GZrOdZZcsV9rAIRchCw)
