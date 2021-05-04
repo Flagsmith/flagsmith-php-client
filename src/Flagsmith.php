@@ -10,7 +10,7 @@ class Flagsmith
     private $curl;
     private $headers = [];
 
-    public function __construct($api_key, $url = 'https://api.flagsmith.io/api/v1/')
+    public function __construct($api_key, $url = 'https://api.flagsmith.com/api/v1/')
     {
         array_push(
             $this->headers,
