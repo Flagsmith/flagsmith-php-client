@@ -1,16 +1,16 @@
 <?php
 
-namespace BulletTrain;
+namespace Flagsmith;
 
 use Exception;
 
-class BulletTrain
+class Flagsmith
 {
-    private const URL = 'https://api.bullet-train.io/api/v1/';
+    private $url;
     private $curl;
     private $headers = [];
 
-    public function __construct($api_key)
+    public function __construct($api_key, $url = 'https://api.flagsmith.io/api/v1/')
     {
         array_push(
             $this->headers,
@@ -18,6 +18,8 @@ class BulletTrain
             "Content-Type: application/json",
             "X-Environment-Key: {$api_key}"
         );
+
+        $this->url = $url;
     }
 
     public function getFlags($user_id = null)
@@ -100,7 +102,7 @@ class BulletTrain
             }
         }
 
-        curl_setopt($this->curl, CURLOPT_URL, self::URL . $path);
+        curl_setopt($this->curl, CURLOPT_URL, $this->url . $path);
         curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($this->curl, CURLOPT_HTTPHEADER, $this->headers);
         $result = json_decode(curl_exec($this->curl));
