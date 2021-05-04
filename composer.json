@@ -1,17 +1,17 @@
 {
-    "name": "bullettrainhq/bullet-train-php-client",
+    "name": "flagsmith/flagsmith-php-client",
     "type": "library",
     "license": "BSD-3-Clause",
     "authors": [
         {
             "name": "Ben Rometsch",
-            "email": "ben.rometsch@bullet-train.io"
+            "email": "ben.rometsch@flagsmith.io"
         }
     ],
     "require": {},
     "autoload": {
         "psr-4": {
-            "BulletTrain\\": "src"
+            "Flagsmith\\": "src"
         }
     }
 }
