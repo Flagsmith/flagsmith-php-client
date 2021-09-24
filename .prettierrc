@@ -1,0 +1,6 @@
+{
+	"trailingCommaPHP": true,
+	"singleQuote": true,
+	"useTabs": false,
+	"braceStyle": "psr-2"
+}

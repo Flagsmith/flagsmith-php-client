@@ -1,0 +1,12 @@
+{
+  // I recommend to disable VS Code's built-in PHP IntelliSense by setting php.suggest.basic to false to avoid duplicate suggestions.
+  "php.suggest.basic": false,
+  "editor.formatOnSave": true,
+  "[php]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "workbench.colorCustomizations": {},
+  "taskExplorer.pathToMake": "make",
+  "coverage-gutters.showLineCoverage": true,
+  "coverage-gutters.showRulerCoverage": true
+}
