@@ -4,6 +4,11 @@ namespace Flagsmith;
 
 use Psr\SimpleCache\CacheInterface;
 
+/**
+ * This class is a wrapper for the PSR-16 cache interface.
+ *
+ * It exists as an easy way to allow use to set global Prefix and TTL.
+ */
 class Cache
 {
     private CacheInterface $cache;

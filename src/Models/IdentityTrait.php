@@ -31,9 +31,9 @@ class IdentityTrait
     /**
      * Get the value of value
      *
-     * @return string
+     * @return string|null
      */
-    public function getValue(): string
+    public function getValue(): ?string
     {
         return $this->value;
     }

@@ -27,6 +27,7 @@ class Flagsmith
     private ?Cache $cache = null;
     private ?int $timeToLive = null;
     private string $cachePrefix = 'flagsmith';
+    private bool $skipCache = false;
 
     public function __construct(
         string $apiKey,
@@ -34,6 +35,7 @@ class Flagsmith
     ) {
         $this->apiKey = $apiKey;
         $this->host = $host;
+        //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
         $this->client = new Client();
     }
 
@@ -97,6 +99,28 @@ class Flagsmith
     public function withCachePrefix(string $cachePrefix): self
     {
         return $this->with('cachePrefix', $cachePrefix);
+    }
+
+    /**
+     * Should the cache be skipped (but still updated)
+     *
+     * @return bool
+     */
+    public function skipCache(): bool
+    {
+        return $this->skipCache;
+    }
+
+    /**
+     * Whether to Skip Cache (but still update it)
+     *
+     * @param bool $skipCache
+     *
+     * @return self
+     */
+    public function withSkipCache(bool $skipCache): self
+    {
+        return $this->with('skipCache', $skipCache);
     }
 
     /**
@@ -257,7 +281,7 @@ class Flagsmith
     }
 
     /**
-     * Set Traits by Identity
+     * Set Traits by an Identity
      *
      * @param Identity $identity
      * @return boolean
@@ -338,6 +362,8 @@ class Flagsmith
             []
         );
 
+        //Check to see if Traits have changed compared
+        //to the cached traits, if so then force a request
         $force = false;
         foreach ($newTraits as $key => $value) {
             if (
@@ -359,7 +385,7 @@ class Flagsmith
     }
 
     /**
-     * Call the API and cache the response
+     * Call the API and cache the response (If Caching is Enabled)
      *
      * @param string $cacheKey
      * @param string $method
@@ -379,7 +405,8 @@ class Flagsmith
             return $this->call($method, $uri, $body);
         }
 
-        if ($force || !$this->cache->has($cacheKey)) {
+        //If force, or skipCache, or the key does not exist then call the API
+        if ($force || $this->skipCache() || !$this->cache->has($cacheKey)) {
             $response = $this->call($method, $uri, $body);
             $this->cache->set($cacheKey, $response);
         }
@@ -391,6 +418,8 @@ class Flagsmith
      * Call Request
      *
      * This sets up a FIG PSR-7 request and returns the response through a PSR-18 call
+     *
+     * Note: We use Guzzle's Request here to construct a PSR-7 RequestInterface
      *
      * @param string $method
      * @param string $uri
