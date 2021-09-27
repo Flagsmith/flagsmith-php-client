@@ -363,14 +363,14 @@ class Flagsmith
         );
 
         //Check to see if Traits have changed compared
-        //to the cached traits, if so then force a request
-        $force = false;
+        //to the cached traits, if so then skip cache
+        $skipCache = false;
         foreach ($newTraits as $key => $value) {
             if (
                 !isset($originalTraits[$key]) ||
                 $originalTraits[$key] !== $value
             ) {
-                $force = true;
+                $skipCache = true;
                 break;
             }
         }
@@ -380,7 +380,7 @@ class Flagsmith
             $method,
             $uri,
             $body,
-            $force
+            $skipCache
         );
     }
 
@@ -391,7 +391,7 @@ class Flagsmith
      * @param string $method
      * @param string $uri
      * @param array $body
-     * @param boolean $force
+     * @param boolean $skipCache
      * @return array
      */
     private function cachedCall(
@@ -399,14 +399,14 @@ class Flagsmith
         string $method,
         string $uri,
         array $body = [],
-        bool $force = false
+        bool $skipCache = false
     ): array {
         if (!$this->hasCache()) {
             return $this->call($method, $uri, $body);
         }
 
-        //If force, or skipCache, or the key does not exist then call the API
-        if ($force || $this->skipCache() || !$this->cache->has($cacheKey)) {
+        //If $skipCache, or skipCache(), or the key does not exist then call the API
+        if ($skipCache || $this->skipCache() || !$this->cache->has($cacheKey)) {
             $response = $this->call($method, $uri, $body);
             $this->cache->set($cacheKey, $response);
         }
