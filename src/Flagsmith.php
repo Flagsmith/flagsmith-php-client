@@ -9,13 +9,15 @@ use Flagsmith\Models\Feature;
 use Flagsmith\Models\Flag;
 use Flagsmith\Models\Identity;
 use Flagsmith\Models\IdentityTrait;
-use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
 use InvalidArgumentException;
 use JsonException;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Client\RequestExceptionInterface;
 use Psr\SimpleCache\CacheInterface;
+use Http\Discovery\Psr18ClientDiscovery;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 
 class Flagsmith
 {
@@ -23,11 +25,16 @@ class Flagsmith
 
     private string $apiKey;
     private string $host;
+
     private ClientInterface $client;
+    private RequestFactoryInterface $requestFactory;
+    private StreamFactoryInterface $streamFactory;
+
     private ?Cache $cache = null;
     private ?int $timeToLive = null;
     private string $cachePrefix = 'flagsmith';
     private bool $skipCache = false;
+    private bool $useCacheAsFailover = false;
 
     public function __construct(
         string $apiKey,
@@ -36,7 +43,9 @@ class Flagsmith
         $this->apiKey = $apiKey;
         $this->host = $host;
         //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
-        $this->client = new Client();
+        $this->client = Psr18ClientDiscovery::find();
+        $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
+        $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
     }
 
     /**
@@ -48,6 +57,30 @@ class Flagsmith
     public function withClient(ClientInterface $client): self
     {
         return $this->with('client', $client);
+    }
+
+    /**
+     * Set the Request Factory
+     *
+     * @param RequestFactoryInterface $requestFactory
+     * @return self
+     */
+    public function withRequestFactory(
+        RequestFactoryInterface $requestFactory
+    ): self {
+        return $this->with('requestFactory', $requestFactory);
+    }
+
+    /**
+     * Set the Stream Factory
+     *
+     * @param StreamFactoryInterface $streamFactory
+     * @return self
+     */
+    public function withStreamFactory(
+        StreamFactoryInterface $streamFactory
+    ): self {
+        return $this->with('streamFactory', $streamFactory);
     }
 
     /**
@@ -76,6 +109,16 @@ class Flagsmith
     public function hasCache(): bool
     {
         return !is_null($this->cache);
+    }
+
+    /**
+     * Get the Cache Wrapper
+     *
+     * @return Cache|null
+     */
+    public function getCache(): ?Cache
+    {
+        return $this->cache;
     }
 
     /**
@@ -131,6 +174,19 @@ class Flagsmith
     public function getFlags(): array
     {
         return $this->mapFlags($this->cachedCall('global', 'GET', 'flags/'));
+    }
+
+    /**
+     * Check to see if Identity is already cached
+     *
+     * @param Identity $identity
+     * @return boolean
+     */
+    public function hasIdentityInCache(Identity $identity): bool
+    {
+        return $this->hasCache()
+            ? $this->cache->has("identity.{$identity->getId()}")
+            : false;
     }
 
     /**
@@ -308,6 +364,28 @@ class Flagsmith
     }
 
     /**
+     * Get the value of useAsFailover
+     *
+     * @return bool
+     */
+    public function useCacheAsFailover(): bool
+    {
+        return $this->useCacheAsFailover;
+    }
+
+    /**
+     * Set the value of useAsFailover
+     *
+     * @param bool $useAsFailover
+     *
+     * @return self
+     */
+    public function withUseCacheAsFailover(bool $useCacheAsFailover): self
+    {
+        return $this->with('useCacheAsFailover', $useCacheAsFailover);
+    }
+
+    /**
      * Call the API with an Identity and cache the response
      *
      * @param Identity $identity
@@ -407,8 +485,14 @@ class Flagsmith
 
         //If $skipCache, or skipCache(), or the key does not exist then call the API
         if ($skipCache || $this->skipCache() || !$this->cache->has($cacheKey)) {
-            $response = $this->call($method, $uri, $body);
-            $this->cache->set($cacheKey, $response);
+            try {
+                $response = $this->call($method, $uri, $body);
+                $this->cache->set($cacheKey, $response);
+            } catch (APIException $e) {
+                if (!$this->useCacheAsFailover) {
+                    throw $e;
+                }
+            }
         }
 
         return $this->cache->get($cacheKey);
@@ -428,16 +512,14 @@ class Flagsmith
      */
     private function call(string $method, string $uri, array $body = []): array
     {
-        $request = new Request(
-            $method,
-            rtrim($this->host, '/') . '/' . $uri,
-            [
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'X-Environment-Key' => $this->apiKey,
-            ],
-            json_encode($body)
-        );
+        $stream = $this->streamFactory->createStream(json_encode($body));
+
+        $request = $this->requestFactory
+            ->createRequest($method, rtrim($this->host, '/') . '/' . $uri)
+            ->withHeader('Accept', 'application/json')
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('X-Environment-Key', $this->apiKey)
+            ->withBody($stream);
 
         try {
             $response = $this->client->sendRequest($request);
@@ -468,7 +550,7 @@ class Flagsmith
     }
 
     /**
-     * Normalize Key
+     * Normalize Key (Keep public for external use)
      *
      * @param string $key
      * @return string
@@ -503,7 +585,7 @@ class Flagsmith
                 $carry[
                     $this->normalizeKey($flag['feature']['name'])
                 ] = (new Flag())
-                    ->withId($flag['id'])
+                    ->withId($flag['id'] ?? null)
                     ->withFeature($feature)
                     ->withFeatureStateValue($flag['feature_state_value'])
                     ->withEnabled($flag['enabled'])

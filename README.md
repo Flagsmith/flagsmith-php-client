@@ -6,6 +6,35 @@
 
 The SDK for PHP applications for [https://www.flagsmith.com/](https://www.flagsmith.com/).
 
+## Installation
+
+`composer require flagsmith/flagsmith-php-client`
+
+Requires PHP 7.4 or newer and ships with GuzzleHTTP.
+
+You can optionally provide your own implementation of PSR-18 and PSR-16
+
+> You will also need some implementation of [PSR-18](https://packagist.org/providers/psr/http-client-implementation)
+> and [PSR-17](https://packagist.org/providers/psr/http-factory-implementation), for example
+> [Guzzle](https://packagist.org/packages/guzzlehttp/guzzle)
+> and [PSR-16](https://packagist.org/providers/psr/simple-cache-implementation), for example
+> [Symfony Cache](https://packagist.org/packages/symfony/cache).
+> Example:
+
+`composer require flagsmith/flagsmith-php-client guzzlehttp/guzzle symfony/cache`
+
+or
+
+`composer require flagsmith/flagsmith-php-client symfony/http-client nyholm/psr7 symfony/cache`
+
+## Usage
+
+The Flagsmith PHP Client is utilized in such a way that makes it immutable. Everytime you change or set a setting the client will return a clone of itself.
+
+```php
+$flagsmith = new Flagsmith('apiToken');
+```
+
 ## Adding to your project
 
 For full documentation visit [https://docs.flagsmith.com/clients/php/](https://docs.flagsmith.com/clients/php/)

@@ -10,8 +10,13 @@
     ],
     "require": {
         "php": ">=7.4",
-        "psr/http-client": "^1.0",
+        "php-http/discovery": "^1.14",
         "psr/simple-cache": "^1.0",
+        "psr/http-factory-implementation": "1.0",
+        "psr/http-client-implementation": "1.0",
+        "psr/http-message-implementation": "1.0"
+    },
+    "require-dev": {
         "guzzlehttp/guzzle": "^7.3"
     },
     "autoload": {

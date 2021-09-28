@@ -8,9 +8,9 @@ class Flag
 {
     use HasWith;
 
-    private int $id;
+    private ?int $id = null;
     private Feature $feature;
-    private string $featureStateValue;
+    private ?string $featureStateValue = null;
     private bool $enabled;
     private int $environment;
     private ?int $featureSegment = null;
@@ -18,9 +18,9 @@ class Flag
     /**
      * Get the value of id
      *
-     * @return int
+     * @return int|null
      */
-    public function getId(): int
+    public function getId(): ?int
     {
         return $this->id;
     }
@@ -28,11 +28,11 @@ class Flag
     /**
      * Set the value of id
      *
-     * @param int $id
+     * @param int|null $id
      *
      * @return self
      */
-    public function withId(int $id): self
+    public function withId(?int $id): self
     {
         return $this->with('id', $id);
     }
@@ -62,9 +62,9 @@ class Flag
     /**
      * Get the value of featureStateValue
      *
-     * @return string
+     * @return string|null
      */
-    public function getFeatureStateValue(): string
+    public function getFeatureStateValue(): ?string
     {
         return $this->featureStateValue;
     }
@@ -72,11 +72,11 @@ class Flag
     /**
      * Set the value of featureStateValue
      *
-     * @param string $featureStateValue
+     * @param string|null$featureStateValue
      *
      * @return self
      */
-    public function withFeatureStateValue(string $featureStateValue): self
+    public function withFeatureStateValue(?string $featureStateValue): self
     {
         return $this->with('featureStateValue', $featureStateValue);
     }

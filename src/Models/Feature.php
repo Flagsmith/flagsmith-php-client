@@ -12,7 +12,7 @@ class Feature
     private int $id;
     private string $name;
     private DateTimeInterface $createdDate;
-    private string $description;
+    private ?string $description = null;
     private string $initialValue;
     private bool $defaultEnabled;
     private string $type;
@@ -86,9 +86,9 @@ class Feature
     /**
      * Get the value of description
      *
-     * @return string
+     * @return string|null
      */
-    public function getDescription(): string
+    public function getDescription(): ?string
     {
         return $this->description;
     }
@@ -96,11 +96,11 @@ class Feature
     /**
      * Set the value of description
      *
-     * @param string $description
+     * @param string|null $description
      *
      * @return self
      */
-    public function withDescription(string $description): self
+    public function withDescription(?string $description): self
     {
         return $this->with('description', $description);
     }

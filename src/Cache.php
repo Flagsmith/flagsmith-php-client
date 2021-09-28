@@ -42,7 +42,7 @@ class Cache
     public function set(string $key, $value): bool
     {
         return $this->cache->set(
-            $this->prefix . '.' . $key,
+            $this->getKeyWithPrefix($key),
             $value,
             $this->ttl
         );
@@ -65,7 +65,7 @@ class Cache
      */
     public function has(string $key): bool
     {
-        return $this->cache->has($this->prefix . '.' . $key);
+        return $this->cache->has($this->getKeyWithPrefix($key));
     }
 
     /**
@@ -81,7 +81,7 @@ class Cache
      */
     public function get(string $key, $default = null)
     {
-        return $this->cache->get($this->prefix . '.' . $key, $default);
+        return $this->cache->get($this->getKeyWithPrefix($key), $default);
     }
 
     /**
@@ -102,7 +102,7 @@ class Cache
     {
         $newValues = [];
         foreach ($values as $key => $value) {
-            $newValues[$this->prefix . '.' . $key] = $value;
+            $newValues[$this->getKeyWithPrefix($key)] = $value;
         }
 
         return $this->cache->setMultiple($newValues, $this->ttl);
@@ -123,8 +123,19 @@ class Cache
     public function getMultiple(array $keys, $default = null)
     {
         return $this->cache->getMultiple(
-            array_map(fn($key) => $this->prefix . '.' . $key, $keys),
+            array_map(fn($key) => $this->getKeyWithPrefix($key), $keys),
             $default
         );
+    }
+
+    /**
+     * Get the full Key name including Prefix
+     *
+     * @param string $key
+     * @return string
+     */
+    public function getKeyWithPrefix(string $key): string
+    {
+        return $this->prefix . '.' . $key;
     }
 }
