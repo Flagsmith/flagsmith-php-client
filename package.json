@@ -1,0 +1,19 @@
+{
+	"name": "@clearlyip/laravel-flagsmith",
+	"version": "1.0.0",
+	"main": "index.js",
+	"directories": {
+		"test": "tests"
+	},
+	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "ssh://git@github.com:clearlyip/laravel-flagsmith.git"
+	},
+	"author": "",
+	"license": "BSD 3-Clause",
+	"dependencies": {
+		"@prettier/plugin-php": "^0.14.3",
+		"prettier": "^2.1.2"
+	}
+}
