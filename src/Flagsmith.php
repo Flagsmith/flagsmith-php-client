@@ -489,7 +489,10 @@ class Flagsmith
                 $response = $this->call($method, $uri, $body);
                 $this->cache->set($cacheKey, $response);
             } catch (APIException $e) {
-                if (!$this->useCacheAsFailover) {
+                if (
+                    !$this->useCacheAsFailover ||
+                    !$this->cache->has($cacheKey)
+                   ) {
                     throw $e;
                 }
             }
