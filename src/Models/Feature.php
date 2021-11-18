@@ -13,7 +13,7 @@ class Feature
     private string $name;
     private DateTimeInterface $createdDate;
     private ?string $description = null;
-    private string $initialValue;
+    private ?string $initialValue = null;
     private bool $defaultEnabled;
     private string $type;
 
@@ -118,11 +118,11 @@ class Feature
     /**
      * Set the value of initialValue
      *
-     * @param string $initialValue
+     * @param string|null $initialValue
      *
      * @return self
      */
-    public function withInitialValue(string $initialValue): self
+    public function withInitialValue(?string $initialValue): self
     {
         return $this->with('initialValue', $initialValue);
     }
