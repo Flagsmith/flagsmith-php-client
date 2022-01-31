@@ -521,9 +521,12 @@ class Flagsmith
             ->createRequest($method, rtrim($this->host, '/') . '/' . $uri)
             ->withHeader('Accept', 'application/json')
             ->withHeader('Content-Type', 'application/json')
-            ->withHeader('X-Environment-Key', $this->apiKey)
-            ->withBody($stream);
+            ->withHeader('X-Environment-Key', $this->apiKey);
 
+        if ($method !== 'GET') {
+            $request = $request->withBody($stream);
+        }
+        
         try {
             $response = $this->client->sendRequest($request);
         } catch (RequestExceptionInterface $e) {
