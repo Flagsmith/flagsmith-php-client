@@ -1,0 +1,8 @@
+{
+  "require": {
+    "nyholm/psr7": "1.4.1",
+    "flagsmith/flagsmith-php-client": "^2.1",
+    "symfony/http-client": "^5.4",
+    "php-http/httplug": "^2.2"
+  }
+}

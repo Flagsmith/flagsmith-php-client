@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  app:
+    container_name: app
+    build: ./
+    volumes:
+      - ./:/var/code
+    command: tail -f /dev/null
