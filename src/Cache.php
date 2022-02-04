@@ -39,12 +39,12 @@ class Cache
      * @throws \Psr\SimpleCache\InvalidArgumentException
      *   MUST be thrown if the $key string is not a legal value.
      */
-    public function set(string $key, $value): bool
+    public function set(string $key, $value, $ttl = null): bool
     {
         return $this->cache->set(
             $this->getKeyWithPrefix($key),
             $value,
-            $this->ttl
+            $ttl ?? $this->ttl
         );
     }
 
