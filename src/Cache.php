@@ -123,7 +123,7 @@ class Cache
     public function getMultiple(array $keys, $default = null)
     {
         return $this->cache->getMultiple(
-            array_map(fn($key) => $this->getKeyWithPrefix($key), $keys),
+            array_map(fn ($key) => $this->getKeyWithPrefix($key), $keys),
             $default
         );
     }

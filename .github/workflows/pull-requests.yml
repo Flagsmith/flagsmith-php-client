@@ -1,0 +1,51 @@
+name: Flagsmith PHP Pull Request
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
+        branches:
+            - main
+            - release**
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        name: Flag engine Unit tests
+
+        strategy:
+            max-parallel: 4
+            matrix:
+                php-version: ['7.4', '8.0', '8.1'] # TODO add '8.2' once available
+
+        steps:
+            - name: Cloning repo
+              uses: actions/checkout@v2
+#              with:
+#                  fetch-depth: 0
+#                  submodules: recursive
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  version: '{{ matrix.php-version }}'
+                  tools: php-cs-fixer, phpunit
+
+            - name: Get composer cache directory
+              id: composer-cache
+              run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+            - name: Cache dependencies
+              uses: actions/cache@v2
+              with:
+                  path: ${{ steps.composer-cache.outputs.dir }}
+                  key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
+                  restore-keys: ${{ runner.os }}-composer-
+
+            - name: Install dependencies
+              run: composer install --prefer-dist
+
+            - name: Check coding style
+              run: ./vendor/bin/php-cs-fixer fix -vvv --config=.php-cs-fixer.php --dry-run --diff
+
+            - name: Running tests
+              run: ./vendor/bin/phpunit tests/

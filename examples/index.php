@@ -1,7 +1,8 @@
 <?php
+
 require_once './vendor/autoload.php';
 
-use \Flagsmith\Flagsmith;
+use Flagsmith\Flagsmith;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Http\Discovery\Psr18ClientDiscovery;
 
@@ -30,8 +31,3 @@ $response = $httpClient->sendRequest($request);
 var_dump($response->getBody()->getContents());
 
 // TODO - write more API examples once they are implemented.
-
-
-
-
-

@@ -206,7 +206,7 @@ class Flagsmith
                 [
                     'identifier' => $identity->getId(),
                     'traits' => array_map(
-                        fn(IdentityTrait $trait) => [
+                        fn (IdentityTrait $trait) => [
                             'trait_key' => $trait->getKey(),
                             'trait_value' => $trait->getValue(),
                         ],
@@ -351,7 +351,7 @@ class Flagsmith
             'PUT',
             'traits/bulk/',
             array_map(
-                fn(IdentityTrait $trait) => [
+                fn (IdentityTrait $trait) => [
                     'identity' => ['identifier' => $identity->getId()],
                     'trait_key' => $trait->getKey(),
                     'trait_value' => $trait->getValue(),
@@ -526,7 +526,7 @@ class Flagsmith
         if ($method !== 'GET') {
             $request = $request->withBody($stream);
         }
-        
+
         try {
             $response = $this->client->sendRequest($request);
         } catch (RequestExceptionInterface $e) {
