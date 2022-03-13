@@ -24,7 +24,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Flagsmith\\": "src"
+            "Flagsmith\\": "src",
+            "FlagsmithTest\\": "tests"
         }
     }
 }
