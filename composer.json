@@ -1,6 +1,7 @@
 {
     "name": "flagsmith/flagsmith-php-client",
     "type": "library",
+    "version": "3.0.0",
     "license": "BSD-3-Clause",
     "authors": [
         {
