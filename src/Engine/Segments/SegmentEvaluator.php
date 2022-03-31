@@ -50,23 +50,20 @@ class SegmentEvaluator
             return false;
         }
 
-        $traitSegmentRules = [];
         foreach ($segment->getRules() as $rule) {
-            $segmentRule = self::traitsMatchSegmentRule(
+            $matchesRule = self::traitsMatchSegmentRule(
                 $overrideTraits ?? $identity->getIdentityTraits()->getArrayCopy(),
                 $rule,
                 $segment->getId(),
                 $identity->compositeKey()
             );
 
-            $traitSegmentRules[] = $segmentRule;
-
-            if (!$segmentRule) {
-                break;
+            if (!$matchesRule) {
+                return false;
             }
         }
 
-        return self::all($traitSegmentRules);
+        return true;
     }
 
     /**
@@ -97,12 +94,12 @@ class SegmentEvaluator
 
         $matchesCondition = $rule->matchingFunction()($traitConditions);
 
-        $segmentRules = array_map(
+        $traitsMatchingSegmentRules = array_map(
             fn ($ruleNew) => self::traitsMatchSegmentRule($identityTraits, $ruleNew, $segmentId, $identityId),
             $rule->getRules()->getArrayCopy()
         );
 
-        return $matchesCondition && (self::all($segmentRules));
+        return $matchesCondition && (self::all($traitsMatchingSegmentRules));
     }
 
     /**
@@ -126,13 +123,13 @@ class SegmentEvaluator
             ) <= $value);
         }
 
-        $evaluations = array_filter(
+        $matchingTraits = array_filter(
             $identityTraits,
             fn (TraitModel $it) =>
             $it->getTraitKey() === $condition->getProperty()
         );
 
-        $trait = count($evaluations) > 0 ? array_shift($evaluations) : false;
+        $trait = count($matchingTraits) > 0 ? array_shift($matchingTraits) : false;
 
         return $trait ? $condition->matchesTraitValue($trait->getTraitValue()) : false;
     }

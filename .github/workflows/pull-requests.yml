@@ -20,9 +20,9 @@ jobs:
         steps:
             - name: Cloning repo
               uses: actions/checkout@v2
-#              with:
-#                  fetch-depth: 0
-#                  submodules: recursive
+              with:
+                  fetch-depth: 0
+                  submodules: recursive
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2

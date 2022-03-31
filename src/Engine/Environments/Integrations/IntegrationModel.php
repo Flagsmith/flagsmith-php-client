@@ -3,10 +3,12 @@
 namespace Flagsmith\Engine\Environments\Integrations;
 
 use Flagsmith\Concerns\HasWith;
+use Flagsmith\Concerns\JsonSerializer;
 
 class IntegrationModel
 {
     use HasWith;
+    use JsonSerializer;
 
     private string $api_key;
     private string $base_url;

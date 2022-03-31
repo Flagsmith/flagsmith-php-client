@@ -22,11 +22,11 @@ class SegmentEvaluatorTest extends TestCase
     public function segmentIdentityTraitsExpectedResult()
     {
         return [
-            /*[SegmentFixtures::emptySegment(), [], false],
+            [SegmentFixtures::emptySegment(), [], false],
             [SegmentFixtures::segmentSingleCondition(), [], false],
             [
                 SegmentFixtures::segmentSingleCondition(),
-                [(new TraitModel)
+                [(new TraitModel())
                     ->withTraitKey(SegmentFixtures::TRAIT_KEY_1)
                     ->withTraitValue(SegmentFixtures::TRAIT_VALUE_1)],
                 true
@@ -34,11 +34,11 @@ class SegmentEvaluatorTest extends TestCase
             [SegmentFixtures::segmentMultipleConditionsAll(), [], false],
             [
                 SegmentFixtures::segmentMultipleConditionsAll(),
-                [(new TraitModel)
+                [(new TraitModel())
                     ->withTraitKey(SegmentFixtures::TRAIT_KEY_1)
                     ->withTraitValue(SegmentFixtures::TRAIT_VALUE_1)],
                 false
-            ],*/
+            ],
             [
                 SegmentFixtures::segmentMultipleConditionsAll(),
                 [(new TraitModel())

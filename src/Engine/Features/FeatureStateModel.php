@@ -16,7 +16,7 @@ class FeatureStateModel
 
     public FeatureModel $feature;
     public bool $enabled;
-    public $_value;
+    private $_value;
     public string $featurestate_uuid;
     public MultivariateFeatureStateValueModelList $multivariate_feature_state_values;
     public ?int $django_id = null;

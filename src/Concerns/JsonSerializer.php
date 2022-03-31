@@ -9,10 +9,10 @@ trait JsonSerializer
      * @param string $content
      * @return self
      */
-    public static function build($json): self
+    public static function build($jsonDict): self
     {
         $newObject = new self();
-        $newObject->setValues($json);
+        $newObject->setValues($jsonDict);
         return $newObject;
     }
 
