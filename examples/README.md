@@ -6,6 +6,8 @@ This example uses the following packages to invoke Flagsmith APIs.
 - Nyholm/PSR7
 - Symfony/HTTP-client
 - PHP-HTTP/httplug
+- Slim micro framework
+- Slim-twig
 
 ## Steps
 ```sh
@@ -23,8 +25,8 @@ The following steps can be used to run the files in a docker container.
 
 ```sh
 docker-compose up -d
-docker exec -it app composer install
-docker exec -it app index.php
+docker exec -it example-app composer install
+docker exec -it example-app php -S 0.0.0.0:80
 ```
 
 ## Troubleshooting

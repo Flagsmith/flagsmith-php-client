@@ -29,7 +29,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 class Flagsmith
 {
     use HasWith;
-    public const DEFAULT_API_URL = 'https://api.flagsmith.com/api/v1';
+    public const DEFAULT_API_URL = 'https://edge.api.flagsmith.com/api/v1';
     private string $apiKey;
     private string $host = self::DEFAULT_API_URL;
     private ?object $customHeaders = null;
@@ -396,7 +396,7 @@ class Flagsmith
     private function buildIdentityModel(string $identifier, ?object $traits): IdentityModel
     {
         if (empty($this->environment)) {
-            throw new FlagsmithClientError();
+            throw new FlagsmithClientError('Unable to build identity model when no local environment present.');
         }
 
         $traitModels = [];
