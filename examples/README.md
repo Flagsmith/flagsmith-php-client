@@ -12,7 +12,9 @@ This example uses the following packages to invoke Flagsmith APIs.
 ## Steps
 ```sh
 rm -rf ./vendor/
+composer clear-cache
 composer install
+composer update
 php index.php
 php -S 0.0.0.0:8000
 ```
@@ -28,8 +30,10 @@ The following steps can be used to run the files in a docker container.
 ```sh
 docker-compose up -d
 docker exec -it example-app sh -c "rm -rf ./vendor/"
+docker exec -it example-app composer clear-cache
 docker exec -it example-app composer install
-docker exec -it example-app php -S 0.0.0.0:80
+docker exec -it example-app composer update
+docker exec -it example-app php -S 0.0.0.0:8000
 ```
 
 # Reduce Flagsmith calls with local evaluation

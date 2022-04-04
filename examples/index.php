@@ -21,7 +21,7 @@ $flagsmith = (new Flagsmith(TOKEN))
 
         return $defaultFlag;
     });
-
+echo 'here here';
 $featureName = 'secret_button';
 
 // Create App
