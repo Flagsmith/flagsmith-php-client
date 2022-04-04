@@ -6,7 +6,7 @@ trait JsonSerializer
 {
     /**
      * Build the object from JSON.
-     * @param string $content
+     * @param string $jsonDict
      * @return self
      */
     public static function build($jsonDict): self
