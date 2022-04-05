@@ -14,7 +14,6 @@ This example uses the following packages to invoke Flagsmith APIs.
 rm -rf ./vendor/
 composer clear-cache
 composer install
-composer update
 php index.php
 php -S 0.0.0.0:8000
 ```
@@ -27,12 +26,13 @@ More examples will be added for all methods and endpoints.
 
 The following steps can be used to run the files in a docker container.
 
+Note: Please copy .env.sample as .env and replace the API key in the .env file.
+
 ```sh
 docker-compose up -d
 docker exec -it example-app sh -c "rm -rf ./vendor/"
 docker exec -it example-app composer clear-cache
 docker exec -it example-app composer install
-docker exec -it example-app composer update
 docker exec -it example-app php -S 0.0.0.0:8000
 ```
 

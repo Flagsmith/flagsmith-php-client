@@ -4,6 +4,8 @@ services:
   app:
     container_name: example-app
     build: ./
+    environment:
+      API_KEY: ${API_KEY}
     ports:
       - 8000:8000
     volumes:

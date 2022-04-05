@@ -9,9 +9,9 @@ use Slim\Views\TwigMiddleware;
 
 require_once './vendor/autoload.php';
 
-const TOKEN = '--token--';
+const API_KEY = getenv('API_KEY');
 
-$flagsmith = (new Flagsmith(TOKEN))
+$flagsmith = (new Flagsmith(API_KEY))
     ->withDefaultFlagHandler(function ($featureName) {
         $defaultFlag = (new DefaultFlag)
             ->withEnabled(false)->withValue(null);
@@ -21,7 +21,7 @@ $flagsmith = (new Flagsmith(TOKEN))
 
         return $defaultFlag;
     });
-echo 'here here';
+
 $featureName = 'secret_button';
 
 // Create App
