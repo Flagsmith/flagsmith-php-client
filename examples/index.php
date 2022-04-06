@@ -13,7 +13,7 @@ const API_KEY = getenv('API_KEY');
 
 $flagsmith = (new Flagsmith(API_KEY))
     ->withDefaultFlagHandler(function ($featureName) {
-        $defaultFlag = (new DefaultFlag)
+        $defaultFlag = (new DefaultFlag())
             ->withEnabled(false)->withValue(null);
         if ($featureName === 'secret_button') {
             return $defaultFlag->withValue('{"colour": "#ababab"}');
@@ -35,7 +35,6 @@ $app->add(TwigMiddleware::create($app, $twig));
 $app->addErrorMiddleware(true, true, true);
 
 $app->get('/', function ($request, $response, $args) use ($flagsmith, $featureName) {
-
     $queryParams = $request->getQueryParams();
     $flags = $flagsmith->getIdentityFlags(($queryParams['identifier'] ? $queryParams['identifier'] : ''));
 

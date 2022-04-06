@@ -16,19 +16,19 @@ $flags = $flagsmith->getEnvironmentFlags();
 print 'Environment Flags: '.PHP_EOL;
 // Get the flag named secret_button
 var_dump($flags->getFlag('secret_button'));
-// get all flags 
+// get all flags
 var_dump($flags->getFlags());
-// set the default handler, returns this object 
+// set the default handler, returns this object
 $flagsmithDefaultHandler = $flagsmith->withDefaultFlagHandler(function () {
-  return (new DefaultFlag)->withEnabled(true)->withValue('#333');
+    return (new DefaultFlag())->withEnabled(true)->withValue('#333');
 });
 
 try {
-  print 'Accessing flags without default flag handler throws a FlagsmithClientException for features that do not exist.'.PHP_EOL;
-  // throws an exception
-  var_dump($flags->getFlag('ABC123'));
+    print 'Accessing flags without default flag handler throws a FlagsmithClientException for features that do not exist.'.PHP_EOL;
+    // throws an exception
+    var_dump($flags->getFlag('ABC123'));
 } catch (FlagsmithClientError $e) {
-  print 'Flagsmith Client error thrown '.PHP_EOL;
+    print 'Flagsmith Client error thrown '.PHP_EOL;
 }
 
 $flags = $flagsmithDefaultHandler->getEnvironmentFlags();
@@ -41,5 +41,3 @@ print 'Identity Flags for hello_world.'.PHP_EOL;
 var_dump($flagsmith->getIdentityFlags('hello_world'));
 var_dump($flagsmith->getIdentityFlags('tester'));
 var_dump($flagsmith->getIdentityFlags('hello'));
-
-
