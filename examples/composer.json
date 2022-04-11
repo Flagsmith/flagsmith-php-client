@@ -1,8 +1,13 @@
 {
   "require": {
-    "nyholm/psr7": "1.4.1",
-    "flagsmith/flagsmith-php-client": "^2.1",
+    "nyholm/psr7": "^1.5",
+    "flagsmith/flagsmith-php-client": "dev-main",
     "symfony/http-client": "^5.4",
-    "php-http/httplug": "^2.2"
+    "php-http/httplug": "^2.2",
+    "symfony/cache": "^5.4",
+    "slim/slim": "4.*",
+    "slim/twig-view": "^3.3",
+    "nyholm/psr7-server": "^1.0",
+    "php-http/cache-plugin": "^1.7"
   }
 }

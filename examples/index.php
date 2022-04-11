@@ -1,33 +1,52 @@
 <?php
 
+use Flagsmith\Exceptions\FlagsmithClientError;
+use Flagsmith\Flagsmith;
+use Flagsmith\Models\DefaultFlag;
+use Slim\Factory\AppFactory;
+use Slim\Views\Twig;
+use Slim\Views\TwigMiddleware;
+
 require_once './vendor/autoload.php';
 
-use Flagsmith\Flagsmith;
-use Http\Discovery\Psr17FactoryDiscovery;
-use Http\Discovery\Psr18ClientDiscovery;
+const API_KEY = getenv('API_KEY');
 
-const TOKEN = 'M7NT6JDYqhcVgSfJgbnWVY';
-const HOST = 'https://api.flagsmith.com/api/v1/';
+$flagsmith = (new Flagsmith(API_KEY))
+    ->withDefaultFlagHandler(function ($featureName) {
+        $defaultFlag = (new DefaultFlag())
+            ->withEnabled(false)->withValue(null);
+        if ($featureName === 'secret_button') {
+            return $defaultFlag->withValue('{"colour": "#ababab"}');
+        }
 
+        return $defaultFlag;
+    });
 
-$flagsmith = new Flagsmith(TOKEN, HOST); // HOST is optional
-$flags = $flagsmith->getFlags();
+$featureName = 'secret_button';
 
-var_dump($flags);
+// Create App
+$app = AppFactory::create();
 
-// Nyholm PSR7 implementation
-$requestFactory = Psr17FactoryDiscovery::findRequestFactory();
-// Symfony PSR18 implementation
-$httpClient = Psr18ClientDiscovery::find();
+// Create Twig
+$twig = Twig::create(__DIR__ . '/templates', ['cache' => false]);
 
-$request = $requestFactory
-  ->createRequest('GET', rtrim(HOST, '/') . '/flags/')
-  ->withHeader('Accept', 'application/json')
-  ->withHeader('Content-Type', 'application/json')
-  ->withHeader('X-Environment-Key', TOKEN);
+// Add Twig-View Middleware
+$app->add(TwigMiddleware::create($app, $twig));
+$app->addErrorMiddleware(true, true, true);
 
-$response = $httpClient->sendRequest($request);
+$app->get('/', function ($request, $response, $args) use ($flagsmith, $featureName) {
+    $queryParams = $request->getQueryParams();
+    $flags = $flagsmith->getIdentityFlags(($queryParams['identifier'] ? $queryParams['identifier'] : ''));
 
-var_dump($response->getBody()->getContents());
+    $view = Twig::fromRequest($request);
+    return $view->render($response, 'index.html', [
+        'identifier' => $queryParams['identifier'],
+        'traitname' => $queryParams['traitname'],
+        'traitvalue' => $queryParams['traitvalue'],
+        'font_colour' => json_decode($flags->getFeatureValue($featureName)),
+        'enabled' => $flags->isFeatureEnabled($featureName)
+    ]);
+})->setName('profile');
 
-// TODO - write more API examples once they are implemented.
+// Run app
+$app->run();

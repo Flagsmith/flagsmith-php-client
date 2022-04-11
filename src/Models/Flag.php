@@ -3,147 +3,77 @@
 namespace Flagsmith\Models;
 
 use Flagsmith\Concerns\HasWith;
+use Flagsmith\Engine\Features\FeatureStateModel;
 
-class Flag
+class Flag extends BaseFlag
 {
-    use HasWith;
-
-    private ?int $id = null;
-    private Feature $feature;
-    private ?string $featureStateValue = null;
-    private bool $enabled;
-    private int $environment;
-    private ?int $featureSegment = null;
+    public int $feature_id;
+    public string $feature_name;
 
     /**
-     * Get the value of id
-     *
-     * @return int|null
+     * Get the Feature Name
+     * @return string
      */
-    public function getId(): ?int
+    public function getFeatureName(): string
     {
-        return $this->id;
+        return $this->feature_name;
     }
 
     /**
-     * Set the value of id
-     *
-     * @param int|null $id
-     *
-     * @return self
+     * Build the Feature Name
+     * @param string $featureName
+     * @return Flag
      */
-    public function withId(?int $id): self
+    public function withFeatureName(string $featureName): self
     {
-        return $this->with('id', $id);
+        return $this->with('feature_name', $featureName);
     }
 
     /**
-     * Get the value of feature
-     *
-     * @return Feature
-     */
-    public function getFeature(): Feature
-    {
-        return $this->feature;
-    }
-
-    /**
-     * Set the value of feature
-     *
-     * @param Feature $feature
-     *
-     * @return self
-     */
-    public function withFeature(Feature $feature): self
-    {
-        return $this->with('feature', $feature);
-    }
-
-    /**
-     * Get the value of featureStateValue
-     *
-     * @return string|null
-     */
-    public function getFeatureStateValue(): ?string
-    {
-        return $this->featureStateValue;
-    }
-
-    /**
-     * Set the value of featureStateValue
-     *
-     * @param string|null$featureStateValue
-     *
-     * @return self
-     */
-    public function withFeatureStateValue(?string $featureStateValue): self
-    {
-        return $this->with('featureStateValue', $featureStateValue);
-    }
-
-    /**
-     * Get the value of enabled
-     *
-     * @return bool
-     */
-    public function getEnabled(): bool
-    {
-        return $this->enabled;
-    }
-
-    /**
-     * Set the value of enabled
-     *
-     * @param bool $enabled
-     *
-     * @return self
-     */
-    public function withEnabled(bool $enabled): self
-    {
-        return $this->with('enabled', $enabled);
-    }
-
-    /**
-     * Get the value of environment
-     *
+     * Get the feature ID.
      * @return int
      */
-    public function getEnvironment(): int
+    public function getFeatureId(): int
     {
-        return $this->environment;
+        return $this->feature_id;
     }
 
     /**
-     * Set the value of environment
-     *
-     * @param int $environment
-     *
-     * @return self
+     * Build with the feature ID.
+     * @param int $featureId
+     * @return Flag
      */
-    public function withEnvironment(int $environment): self
+    public function withFeatureId(int $featureId): self
     {
-        return $this->with('environment', $environment);
+        return $this->with('feature_id', $featureId);
     }
 
     /**
-     * Get the value of featureSegment
-     *
-     * @return ?int
+     * Build flag from dict.
+     * @param object $flagDict
+     * @return Flag
      */
-    public function getFeatureSegment(): ?int
+    public static function fromApiFlag(object $flagDict): self
     {
-        return $this->featureSegment;
+        return (new self())
+            ->withFeatureId($flagDict->feature->id)
+            ->withFeatureName($flagDict->feature->name)
+            ->withEnabled($flagDict->enabled)
+            ->withValue($flagDict->feature_state_value);
     }
 
     /**
-     * Set the value of featureSegment
-     *
-     * @param int|null $featureSegment
-     *
-     * @return self
+     * Build flag object from Feature State Model.
+     * @param FeatureStateModel $model
+     * @param mixed $identityId
+     * @return Flag
      */
-    public function withFeatureSegment(?int $featureSegment): self
+    public static function fromFeatureStateModel(FeatureStateModel $model, $identityId = null): self
     {
-        return $this->with('featureSegment', $featureSegment);
+        return (new self())
+            ->withFeatureName($model->getFeature()->getName())
+            ->withFeatureId($model->getFeature()->getId())
+            ->withEnabled($model->getEnabled())
+            ->withValue($model->getValue($identityId));
     }
 }
