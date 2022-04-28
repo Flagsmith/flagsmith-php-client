@@ -6,6 +6,7 @@ use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
 use Flagsmith\Engine\Environments\EnvironmentModel;
+use Flagsmith\Flagsmith;
 use Flagsmith\Utils\AnalyticsProcessor;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -80,6 +81,17 @@ class ClientFixtures
     private static function loadFileContents(string $file)
     {
         return file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'Data' . DIRECTORY_SEPARATOR . $file);
+    }
+
+    public static function localEvalFlagsmith()
+    {
+        $flagsmith = (new Flagsmith('api_key', Flagsmith::DEFAULT_API_URL, null, 10))
+            ->withClient(ClientFixtures::getMockClient());
+
+        $flagsmith->updateEnvironment();
+        yield $flagsmith;
+
+        unset($flagsmith);
     }
 
     public static function getEnvironmentModel()

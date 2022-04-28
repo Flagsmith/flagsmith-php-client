@@ -7,23 +7,25 @@ use Flagsmith\Engine\Engine;
 use Flagsmith\Engine\Environments\EnvironmentModel;
 use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Identities\Traits\TraitModel;
+use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
 use Flagsmith\Exceptions\APIException;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Models\Flags;
+use Flagsmith\Models\Segment;
 use Flagsmith\Utils\AnalyticsProcessor;
 use Flagsmith\Utils\IdentitiesGenerator;
 use Flagsmith\Utils\Retry;
 use JsonException;
+use ValueError;
 use Psr\Http\Client\ClientInterface;
 use Psr\SimpleCache\CacheInterface;
 use Http\Discovery\Psr18ClientDiscovery;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
-use ValueError;
 
 class Flagsmith
 {
@@ -286,6 +288,29 @@ class Flagsmith
         }
 
         return $this->getIdentityFlagsFromApi($identifier, $traits);
+    }
+
+    /**
+     * Get a list of segments that the given identity is in.
+     * @param string $identifier a unique identifier for the identity in the current
+     *      environment , e.g. email address, username, uuid
+     * @param object|null $traits a dictionary of traits to add / update on the identity in
+     *      Flagsmith, e.g. {"num_orders": 10}
+     * @return array
+     */
+    public function getIdentitySegments(string $identifier, ?object $traits = null): array
+    {
+        if (empty($this->environment)) {
+            throw new FlagsmithClientError('Local evaluation required to obtain identity segments.');
+        }
+
+        $traits = $traits ?? (object)[];
+        $identityModel = $this->buildIdentityModel($identifier, $traits);
+        $segmentModels = SegmentEvaluator::getIdentitySegments($this->environment, $identityModel);
+
+        return array_map(fn ($segment) => (new Segment())
+            ->withId($segment->getId())
+            ->withName($segment->getName()), $segmentModels);
     }
 
     /**
