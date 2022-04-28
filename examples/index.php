@@ -9,9 +9,7 @@ use Slim\Views\TwigMiddleware;
 
 require_once './vendor/autoload.php';
 
-const API_KEY = getenv('API_KEY');
-
-$flagsmith = (new Flagsmith(API_KEY))
+$flagsmith = (new Flagsmith(getenv('API_KEY')))
     ->withDefaultFlagHandler(function ($featureName) {
         $defaultFlag = (new DefaultFlag())
             ->withEnabled(false)->withValue(null);
@@ -36,7 +34,13 @@ $app->addErrorMiddleware(true, true, true);
 
 $app->get('/', function ($request, $response, $args) use ($flagsmith, $featureName) {
     $queryParams = $request->getQueryParams();
-    $flags = $flagsmith->getIdentityFlags(($queryParams['identifier'] ? $queryParams['identifier'] : ''));
+    $traits = (object)[];
+    if (!empty($queryParams['traitname']) && !empty($queryParams['traitvalue'])) {
+        extract($queryParams);
+        $traits->{ $traitname } = $traitvalue;
+    }
+
+    $flags = $flagsmith->getIdentityFlags(($queryParams['identifier'] ? $queryParams['identifier'] : ''), $traits);
 
     $view = Twig::fromRequest($request);
     return $view->render($response, 'index.html', [
