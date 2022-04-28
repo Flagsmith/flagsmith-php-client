@@ -1,12 +1,8 @@
 <?php
 
-use Flagsmith\Engine\Engine;
-use Flagsmith\Engine\Features\FeatureModel;
-use Flagsmith\Engine\Features\FeatureStateModel;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
-use Flagsmith\Models\Feature;
 use Flagsmith\Utils\IdentitiesGenerator;
 use FlagsmithTest\ClientFixtures;
 use GuzzleHttp\Psr7\Response;
@@ -17,7 +13,7 @@ class FlagsmithClientTest extends TestCase
 {
     public function testUpdateEnvironmentSetsEnvironment()
     {
-        $flagsmith = (new Flagsmith('api_key'))
+        $flagsmith = (new Flagsmith('ser.abcdefg', Flagsmith::DEFAULT_API_URL, null, 10))
             ->withClient(ClientFixtures::getMockClient());
 
         $flagsmith->updateEnvironment();
@@ -251,5 +247,14 @@ class FlagsmithClientTest extends TestCase
         $flags = $flagsmith->getEnvironmentFlags();
 
         $this->assertEquals($flags->getFlag('some-feature'), $defaultFlag);
+    }
+
+    public function testLocalEvaluationRequiresServerKey()
+    {
+        $this->expectException(ValueError::class);
+        $flagsmith = (new Flagsmith('not-a-server-key', Flagsmith::DEFAULT_API_URL, null, 10))
+            ->withClient(ClientFixtures::getMockClient());
+
+        $flagsmith->getEnvironmentFlags();
     }
 }

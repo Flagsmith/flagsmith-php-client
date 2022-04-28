@@ -2,7 +2,6 @@
 
 namespace Flagsmith;
 
-use DateTimeImmutable;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Engine\Engine;
 use Flagsmith\Engine\Environments\EnvironmentModel;
@@ -19,12 +18,12 @@ use Flagsmith\Utils\IdentitiesGenerator;
 use Flagsmith\Utils\Retry;
 use JsonException;
 use Psr\Http\Client\ClientInterface;
-use Psr\Http\Client\RequestExceptionInterface;
 use Psr\SimpleCache\CacheInterface;
 use Http\Discovery\Psr18ClientDiscovery;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use ValueError;
 
 class Flagsmith
 {
@@ -33,7 +32,7 @@ class Flagsmith
     private string $apiKey;
     private string $host = self::DEFAULT_API_URL;
     private ?object $customHeaders = null;
-    private int $environmentTtl = 60;
+    private ?int $environmentTtl = null;
     private Retry $retries;
     private ?AnalyticsProcessor $analyticsProcessor = null;
     private ?\Closure $defaultFlagHandler = null;
@@ -55,7 +54,7 @@ class Flagsmith
         string $apiKey,
         string $host = self::DEFAULT_API_URL,
         object $customHeaders = null,
-        int $environmentTtl = 60,
+        int $environmentTtl = null,
         Retry $retries = null,
         bool $enableAnalytics = false,
         \Closure $defaultFlagHandler = null
@@ -67,6 +66,13 @@ class Flagsmith
         $this->retries = $retries ?? new Retry(3);
         $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
         $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
+        if (is_int($environmentTtl)) {
+            if (stripos($this->apiKey, 'ser.') === false) {
+                throw new ValueError(
+                    'In order to use local evaluation, please generate a server key in the environment settings page.'
+                );
+            }
+        }
 
         //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
         $this->client = Psr18ClientDiscovery::find();
@@ -288,7 +294,9 @@ class Flagsmith
      */
     public function updateEnvironment()
     {
-        $this->environment = $this->getEnvironmentFromApi();
+        if (is_int($this->environmentTtl)) {
+            $this->environment = $this->getEnvironmentFromApi();
+        }
     }
 
     /**
