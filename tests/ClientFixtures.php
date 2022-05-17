@@ -85,7 +85,7 @@ class ClientFixtures
 
     public static function localEvalFlagsmith()
     {
-        $flagsmith = (new Flagsmith('api_key', Flagsmith::DEFAULT_API_URL, null, 10))
+        $flagsmith = (new Flagsmith('ser.api_key', Flagsmith::DEFAULT_API_URL, null, 10))
             ->withClient(ClientFixtures::getMockClient());
 
         $flagsmith->updateEnvironment();
