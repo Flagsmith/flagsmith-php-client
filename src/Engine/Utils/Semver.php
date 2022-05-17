@@ -10,7 +10,7 @@ class Semver
      *  True
      *  >>> is_semver("2.1.41-beta")
      *  False
-     * @param string $semvar
+     * @param string $semver
      * @return bool
      */
     public static function isSemver(string $semver): bool
