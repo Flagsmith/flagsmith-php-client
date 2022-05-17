@@ -5,6 +5,7 @@ namespace Flagsmith\Engine\Segments;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Segments\SegmentConditions;
+use Flagsmith\Engine\Utils\Semver;
 
 class SegmentConditionModel
 {
@@ -86,6 +87,14 @@ class SegmentConditionModel
             settype($castedValue, gettype($traitValue));
         }
 
+        if (is_string($castedValue) && Semver::isSemver($castedValue)) {
+            return $this->matchesSemverTraitValue(
+                Semver::isSemver($traitValue) ? Semver::removeSemverSuffix($traitValue) : $traitValue,
+                Semver::removeSemverSuffix($castedValue),
+                $this->operator
+            );
+        }
+
         switch ($this->operator) {
             case (SegmentConditions::EQUAL):
                 $condition = $traitValue == $castedValue;
@@ -114,6 +123,32 @@ class SegmentConditionModel
             case (SegmentConditions::REGEX):
                 $matchesCount = preg_match_all("/{$castedValue}/", (string) $traitValue);
                 $condition = $matchesCount && $matchesCount > 0;
+                break;
+        }
+
+        return $condition;
+    }
+
+    private function matchesSemverTraitValue($trait, $value, $condition)
+    {
+        switch ($this->operator) {
+            case (SegmentConditions::EQUAL):
+                $condition = version_compare($trait, $value, '==');
+                break;
+            case (SegmentConditions::GREATER_THAN):
+                $condition = version_compare($trait, $value, '>');
+                break;
+            case (SegmentConditions::GREATER_THAN_INCLUSIVE):
+                $condition = version_compare($trait, $value, '>=');
+                break;
+            case (SegmentConditions::LESS_THAN):
+                $condition = version_compare($trait, $value, '<');
+                break;
+            case (SegmentConditions::LESS_THAN_INCLUSIVE):
+                $condition = version_compare($trait, $value, '<=');
+                break;
+            case (SegmentConditions::NOT_EQUAL):
+                $condition = version_compare($trait, $value, '!=');
                 break;
         }
 
