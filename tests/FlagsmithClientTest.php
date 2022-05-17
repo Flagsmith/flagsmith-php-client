@@ -257,7 +257,7 @@ class FlagsmithClientTest extends TestCase
 
         $flagsmith->getEnvironmentFlags();
     }
-    
+
     public function testGetIdentitySegmentsNoTraits()
     {
         foreach (ClientFixtures::localEvalFlagsmith() as $flagsmith) {
