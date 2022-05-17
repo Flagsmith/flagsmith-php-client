@@ -150,16 +150,6 @@ class SegmentConditionModel
             case (SegmentConditions::NOT_EQUAL):
                 $condition = version_compare($trait, $value, '!=');
                 break;
-            case (SegmentConditions::CONTAINS):
-                $condition = strpos($trait, (string) $value) !== false;
-                break;
-            case (SegmentConditions::NOT_CONTAINS):
-                $condition = strpos($trait, (string) $value) === false;
-                break;
-            case (SegmentConditions::REGEX):
-                $matchesCount = preg_match_all("/{$value}/", (string) $trait);
-                $condition = $matchesCount && $matchesCount > 0;
-                break;
         }
 
         return $condition;
