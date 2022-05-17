@@ -257,4 +257,26 @@ class FlagsmithClientTest extends TestCase
 
         $flagsmith->getEnvironmentFlags();
     }
+
+    public function testGetIdentitySegmentsNoTraits()
+    {
+        foreach (ClientFixtures::localEvalFlagsmith() as $flagsmith) {
+            $identifier = 'identifier';
+
+            $segments = $flagsmith->getIdentitySegments($identifier);
+            $this->assertEquals($segments, []);
+        }
+    }
+
+    public function testGetIdentitySegmentsWithValidTrait()
+    {
+        foreach (ClientFixtures::localEvalFlagsmith() as $flagsmith) {
+            $identifier = 'identifier';
+            $traits = (object)['foo' => 'bar'];
+
+            $segments = $flagsmith->getIdentitySegments($identifier, $traits);
+            $this->assertEquals(count($segments), 1);
+            $this->assertEquals($segments[0]->getName(), 'Test segment');
+        }
+    }
 }
