@@ -1,5 +1,6 @@
 <?php
 
+use Flagsmith\Engine\Features\FlagsmithValue;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
@@ -30,7 +31,7 @@ class FlagsmithClientTest extends TestCase
         $allFlags = $flagsmith->getEnvironmentFlags()->allFlags();
 
         $this->assertTrue($allFlags[0]->enabled);
-        $this->assertEquals($allFlags[0]->value, 'some-value');
+        $this->assertEquals($allFlags[0]->value, FlagsmithValue::fromUntypedValue('some-value'));
         $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
     }
 
@@ -60,7 +61,7 @@ class FlagsmithClientTest extends TestCase
         $identityFlags = $flagsmith->getIdentityFlags($identifier)->allFlags();
 
         $this->assertTrue($identityFlags[0]->enabled);
-        $this->assertEquals($identityFlags[0]->value, 'some-value');
+        $this->assertEquals($identityFlags[0]->value, FlagsmithValue::fromUntypedValue('some-value'));
         $this->assertEquals($identityFlags[0]->feature_name, 'some_feature');
     }
 
@@ -84,7 +85,7 @@ class FlagsmithClientTest extends TestCase
         $identityFlags = $flagsmith->getIdentityFlags($identifier, $traits)->allFlags();
 
         $this->assertTrue($identityFlags[0]->enabled);
-        $this->assertEquals($identityFlags[0]->value, 'some-value');
+        $this->assertEquals($identityFlags[0]->value, FlagsmithValue::fromUntypedValue('some-value'));
         $this->assertEquals($identityFlags[0]->feature_name, 'some_feature');
     }
 
@@ -169,7 +170,7 @@ class FlagsmithClientTest extends TestCase
 
         $this->assertFalse($flag->is_default);
         $this->assertEquals($flag->enabled, $defaultFlag->getEnabled());
-        $this->assertEquals($flag->value, 'some-value');
+        $this->assertEquals($flag->value, FlagsmithValue::fromUntypedValue('some-value'));
     }
 
     public function testDefaultFlagIsUsedWhenNoIdentityFlagsReturned()
@@ -227,7 +228,7 @@ class FlagsmithClientTest extends TestCase
 
         $this->assertFalse($flag->is_default);
         $this->assertNotEquals($flag->value, $defaultFlag->getValue());
-        $this->assertEquals($flag->value, 'some-value');
+        $this->assertEquals($flag->value, FlagsmithValue::fromUntypedValue('some-value'));
     }
 
     public function testDefaultFlagsAreUsedIfApiErrorAndDefaultFlagHandlerGiven()

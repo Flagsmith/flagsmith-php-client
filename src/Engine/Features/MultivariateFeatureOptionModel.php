@@ -9,8 +9,13 @@ class MultivariateFeatureOptionModel
 {
     use HasWith;
     use JsonSerializer;
+
     public int $id;
-    public $value;
+    public FlagsmithValue $value;
+
+    private array $keys = [
+        'value' => 'Flagsmith\Engine\Features\FlagsmithValue',
+    ];
 
     /**
      * Get the ID.
@@ -32,9 +37,10 @@ class MultivariateFeatureOptionModel
     }
 
     /**
-     * get the value.
+     * Get the value.
+     * @return FlagsmithValue
      */
-    public function getValue()
+    public function getValue(): FlagsmithValue
     {
         return $this->value;
     }
@@ -44,7 +50,7 @@ class MultivariateFeatureOptionModel
      * @param $value
      * @return MultivariateFeatureOptionModel
      */
-    public function withValue($value): self
+    public function withValue(FlagsmithValue $value): self
     {
         return $this->with('value', $value);
     }

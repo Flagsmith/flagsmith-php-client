@@ -3,6 +3,7 @@
 use Flagsmith\Engine\Features\FeatureModel;
 use Flagsmith\Engine\Features\FeatureStateModel;
 use Flagsmith\Engine\Features\FeatureTypes;
+use Flagsmith\Engine\Features\FlagsmithValue;
 use Flagsmith\Engine\Features\MultivariateFeatureOptionModel;
 use Flagsmith\Engine\Features\MultivariateFeatureStateValueModel;
 use Flagsmith\Engine\Utils\Collections\MultivariateFeatureStateValueModelList;
@@ -27,7 +28,7 @@ class FeatureModelsTest extends TestCase
     public function testInitializingMultivariateFeatureStateValueCreatesDefaultUuid()
     {
         $mvFeatureOption = (new MultivariateFeatureOptionModel())
-            ->withValue('value');
+            ->withValue(FlagsmithValue::fromUntypedValue('value'));
         $mvFsValueModel = (new MultivariateFeatureStateValueModel())
             ->withMultivariateFeatureOption($mvFeatureOption)
             ->withId(1)
@@ -45,7 +46,7 @@ class FeatureModelsTest extends TestCase
         $featureState->setValue($value);
 
         $this->assertEquals($featureState->getValue(), $featureState->getValue(1));
-        $this->assertEquals($featureState->getValue(1), $value);
+        $this->assertEquals($featureState->getValue(1), FlagsmithValue::fromUntypedValue($value));
     }
 
     public function dataForFeatureState(): array
@@ -69,10 +70,10 @@ class FeatureModelsTest extends TestCase
 
         $mvFeatureOption1 = (new MultivariateFeatureOptionModel())
             ->withId(1)
-            ->withValue('foo');
+            ->withValue(FlagsmithValue::fromUntypedValue('foo'));
         $mvFeatureOption2 = (new MultivariateFeatureOptionModel())
             ->withId(2)
-            ->withValue('bar');
+            ->withValue(FlagsmithValue::fromUntypedValue('bar'));
 
         $mvFeatureStateValue1 = (new MultivariateFeatureStateValueModel())
             ->withId(1)
@@ -100,7 +101,10 @@ class FeatureModelsTest extends TestCase
             ->will($this->returnValue($percentage));
         FeatureStateModel::setHashObject($hashingStub);
 
-        $this->assertEquals($mvFeatureState->getValue(1), $expectedValue);
+        $this->assertEquals(
+            $mvFeatureState->getValue(1),
+            FlagsmithValue::fromUntypedValue($expectedValue)
+        );
     }
 
     public function testGetValueUsesDjangoIdForMultivariateValueCalculationIfNotNone()

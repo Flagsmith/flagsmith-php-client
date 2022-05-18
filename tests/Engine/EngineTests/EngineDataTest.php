@@ -2,6 +2,7 @@
 
 use Flagsmith\Engine\Engine;
 use Flagsmith\Engine\Environments\EnvironmentModel;
+use Flagsmith\Engine\Features\FlagsmithValue;
 use Flagsmith\Engine\Identities\IdentityModel;
 use PHPUnit\Framework\TestCase;
 
@@ -54,7 +55,7 @@ class EngineDataTest extends TestCase
 
         foreach ($engineResponse as $index => $featureState) {
             $val = $featureState->getValue($identityModel->getDjangoId());
-            $expectedVal = $flags[$index]->feature_state_value;
+            $expectedVal = FlagsmithValue::fromUntypedValue($flags[$index]->feature_state_value);
 
             $this->assertEquals(
                 $val,

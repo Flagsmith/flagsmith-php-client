@@ -3,12 +3,14 @@
 namespace Flagsmith\Models;
 
 use Flagsmith\Concerns\HasWith;
+use Flagsmith\Engine\Features\FlagsmithValue;
+use Flagsmith\Engine\Features\FlagsmithValueType;
 
 class BaseFlag
 {
     use HasWith;
     public bool $enabled;
-    public $value;
+    public FlagsmithValue $value;
     public bool $is_default = false;
 
     /**
@@ -32,9 +34,9 @@ class BaseFlag
 
     /**
      * Get the value.
-     * @return mixed
+     * @return FlagsmithValue
      */
-    public function getValue()
+    public function getValue(): FlagsmithValue
     {
         return $this->value;
     }
@@ -46,7 +48,7 @@ class BaseFlag
      */
     public function withValue($value): self
     {
-        return $this->with('value', $value);
+        return $this->with('value', FlagsmithValue::fromUntypedValue($value));
     }
 
     /**
@@ -66,5 +68,57 @@ class BaseFlag
     public function withEnabled(bool $enabled): self
     {
         return $this->with('enabled', $enabled);
+    }
+
+    /**
+     * Get the String value.
+     * @return string|null
+     */
+    public function getStringValue(): ?string
+    {
+        if ($this->value->getValueType === FlagsmithValueType::STRING) {
+            return $this->value->getValue();
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the Boolean value.
+     * @return bool|null
+     */
+    public function getBooleanValue(): ?bool
+    {
+        if ($this->value->getValueType === FlagsmithValueType::BOOLEAN) {
+            return strtolower($this->value->getValue()) === 'true';
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the String value.
+     * @return int|null
+     */
+    public function getIntegerValue(): ?int
+    {
+        if ($this->value->getValueType === FlagsmithValueType::FLOAT) {
+            return intval($this->value->getValue());
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the String value.
+     * @return float|null
+     */
+    public function getFloatValue(): ?float
+    {
+        if ($this->value->getValueType === FlagsmithValueType::FLOAT) {
+            return floatval($this->value->getValue());
+        }
+
+        return null;
     }
 }

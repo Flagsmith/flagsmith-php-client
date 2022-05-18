@@ -4,6 +4,7 @@ use Flagsmith\Engine\Environments\EnvironmentAPIKeyModel;
 use Flagsmith\Engine\Environments\EnvironmentModel;
 use Flagsmith\Engine\Features\FeatureStateModel;
 use Flagsmith\Engine\Features\FeatureTypes;
+use Flagsmith\Engine\Features\FlagsmithValue;
 use Flagsmith\Engine\Features\MultivariateFeatureStateValueModel;
 use PHPUnit\Framework\TestCase;
 
@@ -78,7 +79,7 @@ class EnvironmentBuilderTest extends TestCase
             $featureStates
                 ->getFeatureStateModel($featureWithStringValueName)
                 ->getValue(),
-            $stringValue
+            FlagsmithValue::fromUntypedValue($stringValue)
         );
     }
 

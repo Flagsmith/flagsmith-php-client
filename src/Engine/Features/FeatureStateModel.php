@@ -16,7 +16,7 @@ class FeatureStateModel
 
     public FeatureModel $feature;
     public bool $enabled;
-    private $_value;
+    private FlagsmithValue $_value;
     public string $featurestate_uuid;
     public MultivariateFeatureStateValueModelList $multivariate_feature_state_values;
     public ?int $django_id = null;
@@ -24,6 +24,7 @@ class FeatureStateModel
     private array $keys = [
         'feature' => 'Flagsmith\Engine\Features\FeatureModel',
         'multivariate_feature_state_values' => 'Flagsmith\Engine\Utils\Collections\MultivariateFeatureStateValueModelList',
+        '_value' => 'Flagsmith\Engine\Features\FlagsmithValue',
     ];
 
     public function __construct()
@@ -129,8 +130,9 @@ class FeatureStateModel
 
     /**
      * get the value.
+     * @return FlagsmithValue
      */
-    public function getValue($identityId = null)
+    public function getValue($identityId = null): FlagsmithValue
     {
         if ($identityId && count($this->multivariate_feature_state_values) > 0) {
             return $this->getMultivariateValue($identityId);
@@ -141,7 +143,7 @@ class FeatureStateModel
     /**
      * Get the feature statue value.
      */
-    public function getFeatureStateValue()
+    public function getFeatureStateValue(): FlagsmithValue
     {
         return $this->getValue();
     }
@@ -149,9 +151,9 @@ class FeatureStateModel
     /**
      * get the value from multi variate configuration.
      * @param mixed $identityId
-     * @return mixed
+     * @return FlagsmithValue
      */
-    private function getMultivariateValue($identityId)
+    private function getMultivariateValue($identityId): FlagsmithValue
     {
         $identityIdArray = [
             $this->django_id ?? $this->featurestate_uuid,
@@ -195,7 +197,7 @@ class FeatureStateModel
      */
     public function setValue($value)
     {
-        $this->_value = $value;
+        $this->_value = FlagsmithValue::fromUntypedValue($value);
     }
 
 
@@ -209,8 +211,6 @@ class FeatureStateModel
         $featureStateValue = $values->feature_state_value;
         unset($values->feature_state_value);
         $this->setValuesSerializer($values);
-        if (!empty($featureStateValue)) {
-            $this->_value = $featureStateValue;
-        }
+        $this->_value = FlagsmithValue::fromUntypedValue($featureStateValue);
     }
 }

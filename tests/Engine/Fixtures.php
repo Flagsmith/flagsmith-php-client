@@ -13,6 +13,7 @@ use Flagsmith\Engine\Segments\SegmentModel;
 use Flagsmith\Engine\Segments\SegmentRuleModel;
 use Flagsmith\Engine\Segments\SegmentRules;
 use Flagsmith\Engine\Features\FeatureTypes;
+use Flagsmith\Engine\Features\FlagsmithValue;
 use Flagsmith\Engine\Features\MultivariateFeatureOptionModel;
 use Flagsmith\Engine\Features\MultivariateFeatureStateValueModel;
 use Flagsmith\Engine\Identities\IdentityModel;
@@ -173,7 +174,7 @@ class Fixtures
         $multivariateFeatureOptionModel = new MultivariateFeatureOptionModel();
         $multivariateFeatureOptionModel = $multivariateFeatureOptionModel
             ->withId(1)
-            ->withValue('test_value');
+            ->withValue(FlagsmithValue::fromUntypedValue('test_value'));
 
         $multivariateFeatureStateValueModel = new MultivariateFeatureStateValueModel();
         return $multivariateFeatureStateValueModel
