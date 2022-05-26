@@ -237,18 +237,17 @@ class FeatureStateModel
     }
 
     /**
-     * Another FeatureStateModel is deemed to be higher priority if and only if 
-     * it has a FeatureSegment and either this.FeatureSegment is null or the 
-     * value of other.FeatureSegment.priority is lower than that of 
+     * Another FeatureStateModel is deemed to be higher priority if and only if
+     * it has a FeatureSegment and either this.FeatureSegment is null or the
+     * value of other.FeatureSegment.priority is lower than that of
      * this.FeatureSegment.priority.
-     * 
-     * @param FeatureStateModel $other - the other FeatureStateModel to compare priority wiht 
+     *
+     * @param FeatureStateModel $other - the other FeatureStateModel to compare priority wiht
      * @return bool - true if `this` is higher priority than `other`
      */
     public function isHigherPriority(FeatureStateModel $other): bool
     {
-        if ($this->getFeatureSegment() == null || $other->getFeatureSegment() == null)
-        {
+        if ($this->getFeatureSegment() == null || $other->getFeatureSegment() == null) {
             return ($this->getFeatureSegment() != null && $other->getFeatureSegment() == null);
         }
 

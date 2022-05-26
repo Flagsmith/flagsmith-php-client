@@ -155,7 +155,7 @@ class FeatureModelsTest extends TestCase
             ->withFeatureSegment(null);
         $featureState2 = (new FeatureStateModel())
             ->withFeatureSegment(null);
-        
+
         // Then
         $this->assertFalse($featureState1->isHigherPriority($featureState2));
         $this->assertFalse($featureState2->isHigherPriority($featureState1));
@@ -168,7 +168,7 @@ class FeatureModelsTest extends TestCase
             ->withFeatureSegment((new FeatureSegmentModel())->withPriority(0));
         $featureState2 = (new FeatureStateModel())
             ->withFeatureSegment(null);
-        
+
         // Then
         $this->assertTrue($featureState1->isHigherPriority($featureState2));
     }
@@ -180,7 +180,7 @@ class FeatureModelsTest extends TestCase
             ->withFeatureSegment((new FeatureSegmentModel())->withPriority(0));
         $featureState2 = (new FeatureStateModel())
             ->withFeatureSegment((new FeatureSegmentModel())->withPriority(1));
-        
+
         // Then
         $this->assertTrue($featureState1->isHigherPriority($featureState2));
     }

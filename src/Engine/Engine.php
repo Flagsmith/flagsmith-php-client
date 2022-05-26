@@ -141,8 +141,7 @@ class Engine
             foreach ($is->getFeatureStates() as $fs) {
                 $feature = $fs->getFeature();
                 $existing = $featureStates[$feature->getName()];
-                if ($existing != null && $existing->isHigherPriority($fs))
-                {
+                if ($existing != null && $existing->isHigherPriority($fs)) {
                     continue;
                 }
 
