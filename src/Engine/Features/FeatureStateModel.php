@@ -19,8 +19,8 @@ class FeatureStateModel
     private $_value;
     public string $featurestate_uuid;
     public MultivariateFeatureStateValueModelList $multivariate_feature_state_values;
-    public ?FeatureSegmentModel $feature_segment;
     public ?int $django_id = null;
+    public ?FeatureSegmentModel $feature_segment = null;
 
     private array $keys = [
         'feature' => 'Flagsmith\Engine\Features\FeatureModel',
@@ -32,7 +32,6 @@ class FeatureStateModel
     {
         $this->featurestate_uuid = UniqueUID::v4();
         $this->multivariate_feature_state_values = new MultivariateFeatureStateValueModelList();
-        $this->feature_segment = null;
     }
 
     /**
