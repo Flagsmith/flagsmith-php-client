@@ -1,6 +1,7 @@
 <?php
 
 use Flagsmith\Engine\Features\FeatureModel;
+use Flagsmith\Engine\Features\FeatureSegmentModel;
 use Flagsmith\Engine\Features\FeatureStateModel;
 use Flagsmith\Engine\Features\FeatureTypes;
 use Flagsmith\Engine\Features\MultivariateFeatureOptionModel;
@@ -145,5 +146,42 @@ class FeatureModelsTest extends TestCase
         $featureState->getValue(1);
         // validation in with()
         $this->assertTrue(true);
+    }
+
+    public function testIsHigherPriorityReturnsFalseForTwoNullFeatureSegments()
+    {
+        // Given
+        $featureState1 = (new FeatureStateModel())
+            ->withFeatureSegment(null);
+        $featureState2 = (new FeatureStateModel())
+            ->withFeatureSegment(null);
+        
+        // Then
+        $this->assertFalse($featureState1->isHigherPriority($featureState2));
+        $this->assertFalse($featureState2->isHigherPriority($featureState1));
+    }
+
+    public function testIsHigherPriorityReturnsTrueWhenOtherFeatureStateHasNullFeatureSegment()
+    {
+        // Given
+        $featureState1 = (new FeatureStateModel())
+            ->withFeatureSegment((new FeatureSegmentModel())->withPriority(0));
+        $featureState2 = (new FeatureStateModel())
+            ->withFeatureSegment(null);
+        
+        // Then
+        $this->assertTrue($featureState1->isHigherPriority($featureState2));
+    }
+
+    public function testIsHigherPriorityReturnsTrueWhenOtherFeatureStateHasLowerPriorityFeatureSegment()
+    {
+        // Given
+        $featureState1 = (new FeatureStateModel())
+            ->withFeatureSegment((new FeatureSegmentModel())->withPriority(0));
+        $featureState2 = (new FeatureStateModel())
+            ->withFeatureSegment((new FeatureSegmentModel())->withPriority(1));
+        
+        // Then
+        $this->assertTrue($featureState1->isHigherPriority($featureState2));
     }
 }
