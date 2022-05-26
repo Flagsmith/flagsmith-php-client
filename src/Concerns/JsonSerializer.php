@@ -2,10 +2,6 @@
 
 namespace Flagsmith\Concerns;
 
-use SebastianBergmann\Environment\Console;
-
-use function PHPUnit\Framework\isEmpty;
-
 trait JsonSerializer
 {
     /**
