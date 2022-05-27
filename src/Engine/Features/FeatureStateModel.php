@@ -241,7 +241,7 @@ class FeatureStateModel
      * value of other.FeatureSegment.priority is lower than that of
      * this.FeatureSegment.priority.
      *
-     * @param FeatureStateModel $other - the other FeatureStateModel to compare priority wiht
+     * @param FeatureStateModel $other - the other FeatureStateModel to compare priority with
      * @return bool - true if `this` is higher priority than `other`
      */
     public function isHigherPriority(FeatureStateModel $other): bool
