@@ -20,10 +20,12 @@ class FeatureStateModel
     public string $featurestate_uuid;
     public MultivariateFeatureStateValueModelList $multivariate_feature_state_values;
     public ?int $django_id = null;
+    public ?FeatureSegmentModel $feature_segment = null;
 
     private array $keys = [
         'feature' => 'Flagsmith\Engine\Features\FeatureModel',
         'multivariate_feature_state_values' => 'Flagsmith\Engine\Utils\Collections\MultivariateFeatureStateValueModelList',
+        'feature_segment' => 'Flagsmith\Engine\Features\FeatureSegmentModel',
     ];
 
     public function __construct()
@@ -128,6 +130,25 @@ class FeatureStateModel
     }
 
     /**
+     * get the feature ssegment.
+     * @return FeatureSegmentModel
+     */
+    public function getFeatureSegment(): ?FeatureSegmentModel
+    {
+        return $this->feature_segment;
+    }
+
+    /**
+     * build with a feature segment model.
+     * @param FeatureSegmentModel $featureSegment
+     * @return FeatureStateModel
+     */
+    public function withFeatureSegment(?FeatureSegmentModel $featureSegment): self
+    {
+        return $this->with('feature_segment', $featureSegment);
+    }
+
+    /**
      * get the value.
      */
     public function getValue($identityId = null)
@@ -212,5 +233,23 @@ class FeatureStateModel
         if (!empty($featureStateValue)) {
             $this->_value = $featureStateValue;
         }
+    }
+
+    /**
+     * Another FeatureStateModel is deemed to be higher priority if and only if
+     * it has a FeatureSegment and either this.FeatureSegment is null or the
+     * value of other.FeatureSegment.priority is lower than that of
+     * this.FeatureSegment.priority.
+     *
+     * @param FeatureStateModel $other - the other FeatureStateModel to compare priority with
+     * @return bool - true if `this` is higher priority than `other`
+     */
+    public function isHigherPriority(FeatureStateModel $other): bool
+    {
+        if ($this->getFeatureSegment() == null || $other->getFeatureSegment() == null) {
+            return ($this->getFeatureSegment() != null && $other->getFeatureSegment() == null);
+        }
+
+        return $this->getFeatureSegment()->getPriority() < $other->getFeatureSegment()->getPriority();
     }
 }

@@ -139,6 +139,12 @@ class Engine
 
         foreach ($identitySegments as $is) {
             foreach ($is->getFeatureStates() as $fs) {
+                $feature = $fs->getFeature();
+                $existing = $featureStates[$feature->getName()];
+                if ($existing != null && $existing->isHigherPriority($fs)) {
+                    continue;
+                }
+
                 $featureStates[$fs->getFeature()->getName()] = $fs;
             }
         }
