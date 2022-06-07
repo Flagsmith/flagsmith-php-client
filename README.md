@@ -9,6 +9,19 @@
 
 The SDK for PHP applications for [https://www.flagsmith.com/](https://www.flagsmith.com/).
 
+## Requirements
+
+The Flagsmith PHP SDK requires the following PHP extensions to be enabled. These are essentials for the library to function properly.
+
+- bc-math
+- gmp
+
+Please view the documentation here to install the extensions, if you haven't already. For [BC-Math](https://www.php.net/manual/en/bc.installation.php) and [GMP](https://www.php.net/manual/en/gmp.installation.php). To enable for docker containers, please have a look at our sample in the example directory.
+
+## Local Evaluation
+
+Since PHP requests are separate, there is little benefit to use local evaluation without caching. To enable local evaluation, please set the environmentTtl value (>0) and using PSR simple cache implementation.
+
 ## Adding to your project
 
 For full documentation visit [https://docs.flagsmith.com/clients/php/](https://docs.flagsmith.com/clients/php/)

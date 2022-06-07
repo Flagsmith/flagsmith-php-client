@@ -98,14 +98,14 @@ class Cache
      *   MUST be thrown if $values is neither an array nor a Traversable,
      *   or if any of the $values are not a legal value.
      */
-    public function setMultiple(array $values): bool
+    public function setMultiple(array $values, $ttl = null): bool
     {
         $newValues = [];
         foreach ($values as $key => $value) {
             $newValues[$this->getKeyWithPrefix($key)] = $value;
         }
 
-        return $this->cache->setMultiple($newValues, $this->ttl);
+        return $this->cache->setMultiple($newValues, $ttl ?? $this->ttl);
     }
 
     /**

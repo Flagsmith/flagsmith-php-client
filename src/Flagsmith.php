@@ -2,17 +2,25 @@
 
 namespace Flagsmith;
 
-use DateTimeImmutable;
 use Flagsmith\Concerns\HasWith;
+use Flagsmith\Engine\Engine;
+use Flagsmith\Engine\Environments\EnvironmentModel;
+use Flagsmith\Engine\Identities\IdentityModel;
+use Flagsmith\Engine\Identities\Traits\TraitModel;
+use Flagsmith\Engine\Segments\SegmentEvaluator;
+use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
+use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
 use Flagsmith\Exceptions\APIException;
-use Flagsmith\Models\Feature;
-use Flagsmith\Models\Flag;
-use Flagsmith\Models\Identity;
-use Flagsmith\Models\IdentityTrait;
-use InvalidArgumentException;
+use Flagsmith\Exceptions\FlagsmithAPIError;
+use Flagsmith\Exceptions\FlagsmithClientError;
+use Flagsmith\Models\Flags;
+use Flagsmith\Models\Segment;
+use Flagsmith\Utils\AnalyticsProcessor;
+use Flagsmith\Utils\IdentitiesGenerator;
+use Flagsmith\Utils\Retry;
 use JsonException;
+use ValueError;
 use Psr\Http\Client\ClientInterface;
-use Psr\Http\Client\RequestExceptionInterface;
 use Psr\SimpleCache\CacheInterface;
 use Http\Discovery\Psr18ClientDiscovery;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -22,30 +30,106 @@ use Psr\Http\Message\StreamFactoryInterface;
 class Flagsmith
 {
     use HasWith;
-
+    public const DEFAULT_API_URL = 'https://edge.api.flagsmith.com/api/v1';
     private string $apiKey;
-    private string $host;
-
+    private string $host = self::DEFAULT_API_URL;
+    private ?object $customHeaders = null;
+    private ?int $environmentTtl = null;
+    private Retry $retries;
+    private ?AnalyticsProcessor $analyticsProcessor = null;
+    private ?\Closure $defaultFlagHandler = null;
     private ClientInterface $client;
     private RequestFactoryInterface $requestFactory;
     private StreamFactoryInterface $streamFactory;
-
+    private string $environment_flags_url = 'flags/';
+    private string $identities_url = 'identities/';
+    private string $environment_url = 'environment-document/';
     private ?Cache $cache = null;
     private ?int $timeToLive = null;
     private string $cachePrefix = 'flagsmith';
     private bool $skipCache = false;
     private bool $useCacheAsFailover = false;
+    private array $headers = [];
+    private ?EnvironmentModel $environment = null;
 
     public function __construct(
         string $apiKey,
-        string $host = 'https://api.flagsmith.com/api/v1/'
+        string $host = self::DEFAULT_API_URL,
+        object $customHeaders = null,
+        int $environmentTtl = null,
+        Retry $retries = null,
+        bool $enableAnalytics = false,
+        \Closure $defaultFlagHandler = null
     ) {
         $this->apiKey = $apiKey;
-        $this->host = $host;
+        $this->host = rtrim($host, '/');
+        $this->customHeaders = $customHeaders ?? $this->customHeaders;
+        $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
+        $this->retries = $retries ?? new Retry(3);
+        $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
+        $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
+        if (is_int($environmentTtl)) {
+            if (stripos($this->apiKey, 'ser.') === false) {
+                throw new ValueError(
+                    'In order to use local evaluation, please generate a server key in the environment settings page.'
+                );
+            }
+        }
+
         //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
         $this->client = Psr18ClientDiscovery::find();
         $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
         $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
+    }
+
+    /**
+     * Build with customer headers.
+     * @param object $customHeaders
+     * @return Flagsmith
+     */
+    public function withCustomHeaders(object $customHeaders): self
+    {
+        return $this->with('customHeaders', $customHeaders);
+    }
+
+    /**
+     * Build with Retry object.
+     * @param Retry $retries
+     * @return Flagsmith
+     */
+    public function withRetries(Retry $retries): self
+    {
+        return $this->with('retries', $retries);
+    }
+
+    /**
+     * Build with Environment cache TTL.
+     * @param int $environmentTtl
+     * @return Flagsmith
+     */
+    public function withEnvironmentTtl(int $environmentTtl): self
+    {
+        return $this->with('environmentTtl', $environmentTtl);
+    }
+
+    /**
+     * Build with enable Analytics.
+     * @param bool $enableAnalytics
+     * @return Flagsmith
+     */
+    public function withAnalytics(AnalyticsProcessor $analytics): self
+    {
+        return $this->with('analyticsProcessor', $analytics);
+    }
+
+    /**
+     * Build with default flag handler.
+     * @param \Closure $defaultFlagHandler
+     * @return Flagsmith
+     */
+    public function withDefaultFlagHandler(\Closure $defaultFlagHandler): self
+    {
+        return $this->with('defaultFlagHandler', $defaultFlagHandler);
     }
 
     /**
@@ -167,299 +251,198 @@ class Flagsmith
     }
 
     /**
-     * Get all Global Flags
-     *
-     * @return array
+     * Get the environment model.
+     * @return EnvironmentModel
      */
-    public function getFlags(): array
+    public function getEnvironment(): EnvironmentModel
     {
-        return $this->mapFlags($this->cachedCall('global', 'GET', 'flags/'));
+        return $this->environment;
     }
 
     /**
-     * Check to see if Identity is already cached
-     *
-     * @param Identity $identity
-     * @return boolean
+     * Get all the default for flags for the current environment.
+     * @return Flags
      */
-    public function hasIdentityInCache(Identity $identity): bool
+    public function getEnvironmentFlags(): Flags
     {
-        return $this->hasCache()
-            ? $this->cache->has("identity.{$identity->getId()}")
-            : false;
+        if ($this->environment) {
+            return $this->getEnvironmentFlagsFromDocument();
+        }
+
+        return $this->getEnvironmentFlagsFromApi();
     }
 
     /**
-     * Get Identity by Identity
-     *
+     * Get all the flags for the current environment for a given identity. Will also
+     *  upsert all traits to the Flagsmith API for future evaluations. Providing a
+     *  trait with a value of None will remove the trait from the identity if it exists.
      * @param string $identifier
-     * @return Identity
+     * @param object|null $traits
+     * @return Flags
      */
-    public function getIdentityByIndentity(Identity $identity): Identity
+    public function getIdentityFlags(string $identifier, ?object $traits = null): Flags
     {
-        $id = $identity->getId();
-        if ($identity->hasTraits()) {
-            $response = $this->cachedIdentityCall(
-                $identity,
-                'POST',
-                'identities/',
-                [
-                    'identifier' => $identity->getId(),
-                    'traits' => array_map(
-                        fn (IdentityTrait $trait) => [
-                            'trait_key' => $trait->getKey(),
-                            'trait_value' => $trait->getValue(),
-                        ],
-                        $identity->getTraits()
-                    ),
-                ]
-            );
-        } else {
-            $response = $this->cachedCall(
-                "identity.{$id}",
-                'GET',
-                "identities/?identifier={$identity->getId()}"
-            );
+        $traits = $traits ?? (object) [];
+        if ($this->environment) {
+            return $this->getIdentityFlagsFromDocument($identifier, $traits);
         }
 
-        return $identity
-            ->withFlags($this->mapFlags($response['flags']))
-            ->withTraits($this->mapTraits($response['traits']));
+        return $this->getIdentityFlagsFromApi($identifier, $traits);
     }
 
     /**
-     * Get Flags by Identity
-     *
-     * @param Identity $identity
+     * Get a list of segments that the given identity is in.
+     * @param string $identifier a unique identifier for the identity in the current
+     *      environment , e.g. email address, username, uuid
+     * @param object|null $traits a dictionary of traits to add / update on the identity in
+     *      Flagsmith, e.g. {"num_orders": 10}
      * @return array
      */
-    public function getFlagsByIdentity(Identity $identity): array
+    public function getIdentitySegments(string $identifier, ?object $traits = null): array
     {
-        $identity = $this->getIdentityByIndentity($identity);
-        return $identity->getFlags();
-    }
-
-    /**
-     * Get Traits by Identity
-     *
-     * @param Identity $identity
-     * @return array
-     */
-    public function getTraitsByIdentity(Identity $identity): array
-    {
-        $identity = $this->getIdentityByIndentity($identity);
-        return $identity->getTraits();
-    }
-
-    /**
-     * Get a Single Flag
-     *
-     * @param string $name
-     * @return Flag|null
-     */
-    public function getFlag(string $name): ?Flag
-    {
-        $key = $this->normalizeKey($name);
-        return $this->getFlags()[$key] ?? null;
-    }
-
-    /**
-     * Get a Single Flag by Identity
-     *
-     * @param Identity $identity
-     * @param string $name
-     * @return Flag|null
-     */
-    public function getFlagByIdentity(Identity $identity, string $name): ?Flag
-    {
-        $key = $this->normalizeKey($name);
-        return $this->getFlagsByIdentity($identity)[$key] ?? null;
-    }
-
-    /**
-     * Check if Feature is Enabled
-     *
-     * @param string $name
-     * @param boolean $default
-     * @return boolean
-     */
-    public function isFeatureEnabled(string $name, bool $default = false): bool
-    {
-        $flag = $this->getFlag($name);
-        return !is_null($flag) ? $flag->getEnabled() : $default;
-    }
-
-    /**
-     * Is feature enabled by identity
-     *
-     * @param Identity $identity
-     * @param string $name
-     * @param boolean $default
-     * @return boolean
-     */
-    public function isFeatureEnabledByIdentity(
-        Identity $identity,
-        string $name,
-        bool $default = false
-    ): bool {
-        $flag = $this->getFlagByIdentity($identity, $name);
-        return !is_null($flag) ? $flag->getEnabled() : $default;
-    }
-
-    /**
-     * Get Value of Flag
-     *
-     * @param string $name
-     * @param mixed $default
-     * @return mixed
-     */
-    public function getFeatureValue(string $name, $default = null)
-    {
-        $flag = $this->getFlag($name);
-        return !is_null($flag) ? $flag->getFeatureStateValue() : $default;
-    }
-
-    /**
-     * Get Value of Flag By Identity
-     *
-     * @param Identity $identity
-     * @param string $name
-     * @param mixed $default
-     * @return mixed
-     */
-    public function getFeatureValueByIdentity(
-        Identity $identity,
-        string $name,
-        $default = null
-    ) {
-        $flag = $this->getFlagByIdentity($identity, $name);
-        return !is_null($flag) ? $flag->getFeatureStateValue() : $default;
-    }
-
-    /**
-     * Set Traits by an Identity
-     *
-     * @param Identity $identity
-     * @return boolean
-     */
-    public function setTraitsByIdentity(Identity $identity): bool
-    {
-        if (!$identity->hasTraits()) {
-            throw new InvalidArgumentException('There are no traits to set');
+        if (empty($this->environment)) {
+            throw new FlagsmithClientError('Local evaluation required to obtain identity segments.');
         }
-        $this->call(
-            'PUT',
-            'traits/bulk/',
-            array_map(
-                fn (IdentityTrait $trait) => [
-                    'identity' => ['identifier' => $identity->getId()],
-                    'trait_key' => $trait->getKey(),
-                    'trait_value' => $trait->getValue(),
-                ],
-                $identity->getTraits()
-            )
+
+        $traits = $traits ?? (object)[];
+        $identityModel = $this->buildIdentityModel($identifier, $traits);
+        $segmentModels = SegmentEvaluator::getIdentitySegments($this->environment, $identityModel);
+
+        return array_map(fn ($segment) => (new Segment())
+            ->withId($segment->getId())
+            ->withName($segment->getName()), $segmentModels);
+    }
+
+    /**
+     * Externalised method to update the environement cache.
+     * @return void
+     */
+    public function updateEnvironment()
+    {
+        if (is_int($this->environmentTtl)) {
+            $this->environment = $this->getEnvironmentFromApi();
+        }
+    }
+
+    /**
+     * Get the environment API.
+     * @return EnvironmentModel
+     */
+    private function getEnvironmentFromApi(): EnvironmentModel
+    {
+        $environmentDict = $this->cachedCall('Environment', 'GET', $this->environment_url, [], false, $this->environmentTtl);
+
+        return EnvironmentModel::build($environmentDict);
+    }
+
+    /**
+     * Get the environment flags from document.
+     * @return Flags
+     */
+    private function getEnvironmentFlagsFromDocument(): Flags
+    {
+        return Flags::fromFeatureStateModels(
+            new FeatureStateModelList(Engine::getEnvironmentFeatureStates($this->environment)),
+            $this->analyticsProcessor,
+            $this->defaultFlagHandler
         );
-
-        return true;
     }
 
     /**
-     * Get the value of useAsFailover
-     *
-     * @return bool
+     * Get identiity flags from document
+     * @param string $identifier
+     * @param object $traits
+     * @return Flags
      */
-    public function useCacheAsFailover(): bool
+    private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
     {
-        return $this->useCacheAsFailover;
+        $identityModel = $this->buildIdentityModel($identifier, $traits);
+        $featureStates = Engine::getIdentityFeatureStates($this->environment, $identityModel);
+
+        return Flags::fromFeatureStateModels(
+            new FeatureStateModelList($featureStates),
+            $this->analyticsProcessor,
+            $this->defaultFlagHandler,
+            $identityModel->compositeKey(),
+        );
     }
 
     /**
-     * Set the value of useAsFailover
-     *
-     * @param bool $useAsFailover
-     *
-     * @return self
+     * Get environment flags from API.
+     * @return Flags
      */
-    public function withUseCacheAsFailover(bool $useCacheAsFailover): self
+    private function getEnvironmentFlagsFromApi(): Flags
     {
-        return $this->with('useCacheAsFailover', $useCacheAsFailover);
-    }
-
-    /**
-     * Call the API with an Identity and cache the response
-     *
-     * @param Identity $identity
-     * @param string $method
-     * @param string $uri
-     * @param array $body
-     * @return array
-     */
-    private function cachedIdentityCall(
-        Identity $identity,
-        string $method,
-        string $uri,
-        array $body = []
-    ): array {
-        if (!$this->hasCache()) {
-            return $this->call($method, $uri, $body);
-        }
-
-        if (
-            !$identity->hasTraits() ||
-            !$this->cache->has("identity.{$identity->getId()}")
-        ) {
-            return $this->cachedCall(
-                "identity.{$identity->getId()}",
-                $method,
-                $uri,
-                $body
+        try {
+            $apiFlags = $this->cachedCall('Global', 'GET', $this->environment_flags_url);
+            return Flags::fromApiFlags(
+                (object) $apiFlags,
+                $this->analyticsProcessor,
+                $this->defaultFlagHandler,
             );
-        }
-
-        //We have traits. Compare the cached traits
-        //If they differ then we need to send this request
-        //Regardless of the cache
-
-        $res = $this->cache->get("identity.{$identity->getId()}");
-
-        $originalTraits = array_reduce(
-            $res['traits'],
-            function (array $carry, array $item) {
-                $carry[$item['trait_key']] = $item['trait_value'];
-                return $carry;
-            },
-            []
-        );
-
-        $newTraits = array_reduce(
-            $identity->getTraits(),
-            function (array $carry, IdentityTrait $item) {
-                $carry[$item->getKey()] = $item->getValue();
-                return $carry;
-            },
-            []
-        );
-
-        //Check to see if Traits have changed compared
-        //to the cached traits, if so then skip cache
-        $skipCache = false;
-        foreach ($newTraits as $key => $value) {
-            if (
-                !isset($originalTraits[$key]) ||
-                $originalTraits[$key] !== $value
-            ) {
-                $skipCache = true;
-                break;
+        } catch (FlagsmithAPIError $e) {
+            if (isset($this->defaultFlagHandler)) {
+                return (new Flags())
+                    ->withDefaultFlagHandler($this->defaultFlagHandler);
             }
+            throw $e;
+        }
+    }
+
+    /**
+     * Get the identity flags from API.
+     *
+     * @return Flags
+     */
+    private function getIdentityFlagsFromApi(string $identifier, ?object $traits): Flags
+    {
+        try {
+            $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
+            $apiFlags = $this->cachedCall(
+                'Global',
+                'POST',
+                $this->identities_url,
+                $data
+            );
+
+            return Flags::fromApiFlags(
+                (object) $apiFlags->flags,
+                $this->analyticsProcessor,
+                $this->defaultFlagHandler,
+            );
+        } catch (FlagsmithAPIError $e) {
+            if (isset($this->defaultFlagHandler)) {
+                return (new Flags())
+                    ->withDefaultFlagHandler($this->defaultFlagHandler);
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Buid with identity model.
+     * @param string $identifier
+     * @param array|null $traits
+     * @return IdentityModel
+     */
+    private function buildIdentityModel(string $identifier, ?object $traits): IdentityModel
+    {
+        if (empty($this->environment)) {
+            throw new FlagsmithClientError('Unable to build identity model when no local environment present.');
         }
 
-        return $this->cachedCall(
-            "identity.{$identity->getId()}",
-            $method,
-            $uri,
-            $body,
-            $skipCache
-        );
+        $traitModels = [];
+        foreach ($traits as $key => $value) {
+            $traitModels[] = (new TraitModel())
+                ->withTraitKey($key)
+                ->withTraitValue($value);
+        }
+
+        return (new IdentityModel())
+            ->withIdentifier($identifier)
+            ->withEnvironmentApiKey($this->apiKey)
+            ->withIdentityTraits(new IdentityTraitList($traitModels));
     }
 
     /**
@@ -470,15 +453,16 @@ class Flagsmith
      * @param string $uri
      * @param array $body
      * @param boolean $skipCache
-     * @return array
+     * @return object|array
      */
     private function cachedCall(
         string $cacheKey,
         string $method,
         string $uri,
         array $body = [],
-        bool $skipCache = false
-    ): array {
+        bool $skipCache = false,
+        ?int $ttl = null
+    ) {
         if (!$this->hasCache()) {
             return $this->call($method, $uri, $body);
         }
@@ -487,7 +471,7 @@ class Flagsmith
         if ($skipCache || $this->skipCache() || !$this->cache->has($cacheKey)) {
             try {
                 $response = $this->call($method, $uri, $body);
-                $this->cache->set($cacheKey, $response);
+                $this->cache->set($cacheKey, $response, $ttl);
             } catch (APIException $e) {
                 if (
                     !$this->useCacheAsFailover ||
@@ -511,9 +495,9 @@ class Flagsmith
      * @param string $method
      * @param string $uri
      * @param array $body
-     * @return array
+     * @return object|array
      */
-    private function call(string $method, string $uri, array $body = []): array
+    private function call(string $method, string $uri, array $body = [])
     {
         $stream = $this->streamFactory->createStream(json_encode($body));
 
@@ -523,106 +507,66 @@ class Flagsmith
             ->withHeader('Content-Type', 'application/json')
             ->withHeader('X-Environment-Key', $this->apiKey);
 
+        if (!empty($this->customHeaders)) {
+            foreach ($this->customHeaders as $name => $value) {
+                $request = $request->withHeader($name, $value);
+            }
+        }
+
         if ($method !== 'GET') {
             $request = $request->withBody($stream);
         }
 
-        try {
-            $response = $this->client->sendRequest($request);
-        } catch (RequestExceptionInterface $e) {
-            throw new APIException($e->getMessage(), $e->getCode(), $e);
-        }
+        $response = null;
+        $retry = clone ($this->retries);
+        $statusCode = null;
 
-        if ($response->getStatusCode() !== 200) {
-            $message = $response->getBody()->getContents();
+        do {
+            $retry->waitWithBackoff();
+            // sets to true on last try
+            $throwException = !$retry->hasRetriesRemaining();
+
             try {
-                $error = json_decode($message, true, 512, JSON_THROW_ON_ERROR);
-                if (!empty($error['detail'])) {
-                    $message = $error['detail'];
+                $response = $this->client->sendRequest($request);
+            } catch (\Exception $e) {
+                if ($throwException) {
+                    throw new FlagsmithAPIError($e->getMessage(), $e->getCode(), $e);
                 }
-            } catch (JsonException $e) {
             }
 
-            throw new APIException($message);
+            if ($response) {
+                $statusCode = $response->getStatusCode();
+
+                if ($statusCode === 200) {
+                    // request was successful.
+                    break;
+                } elseif ($throwException && $statusCode !== 200) {
+                    $message = $response->getBody()->getContents();
+                    try {
+                        $error = json_decode($message, true, 512, JSON_THROW_ON_ERROR);
+                        if (!empty($error['detail'])) {
+                            $message = $error['detail'];
+                        }
+                    } catch (JsonException $e) {
+                    }
+
+                    throw new FlagsmithAPIError($message);
+                }
+            }
+
+            $retry->retryAttempted();
+        } while ($retry->isRetry($statusCode));
+
+        if ($response) {
+            //Return as array, easier to work with in PHP
+            return json_decode(
+                $response->getBody()->getContents(),
+                false,
+                512,
+                JSON_THROW_ON_ERROR
+            );
         }
 
-        //Return as array, easier to work with in PHP
-        return json_decode(
-            $response->getBody()->getContents(),
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-    }
-
-    /**
-     * Normalize Key (Keep public for external use)
-     *
-     * @param string $key
-     * @return string
-     */
-    private function normalizeKey(string $key): string
-    {
-        return strtolower($key);
-    }
-
-    /**
-     * Map Flags to their respective classes
-     *
-     * @param array $flags
-     * @return array
-     */
-    private function mapFlags(array $flags): array
-    {
-        return array_reduce(
-            $flags,
-            function (array $carry, array $flag) {
-                $feature = (new Feature())
-                    ->withId($flag['feature']['id'])
-                    ->withName($flag['feature']['name'])
-                    ->withCreatedDate(
-                        new DateTimeImmutable($flag['feature']['created_date'])
-                    )
-                    ->withDescription($flag['feature']['description'])
-                    ->withInitialValue($flag['feature']['initial_value'])
-                    ->withDefaultEnabled($flag['feature']['default_enabled'])
-                    ->withType($flag['feature']['type']);
-
-                $carry[
-                    $this->normalizeKey($flag['feature']['name'])
-                ] = (new Flag())
-                    ->withId($flag['id'] ?? null)
-                    ->withFeature($feature)
-                    ->withFeatureStateValue($flag['feature_state_value'])
-                    ->withEnabled($flag['enabled'])
-                    ->withEnvironment($flag['environment'])
-                    ->withFeatureSegment($flag['feature_segment']);
-
-                return $carry;
-            },
-            []
-        );
-    }
-
-    /**
-     * Map Traits to their respective classes
-     *
-     * @param array $traits
-     * @return array
-     */
-    private function mapTraits(array $traits): array
-    {
-        return array_reduce(
-            $traits,
-            function (array $carry, array $trait) {
-                $carry[
-                    $this->normalizeKey($trait['trait_key'])
-                ] = (new IdentityTrait($trait['trait_key']))
-                    ->withId($trait['id'])
-                    ->withValue($trait['trait_value']);
-                return $carry;
-            },
-            []
-        );
+        throw new FlagsmithAPIError('No response received!');
     }
 }

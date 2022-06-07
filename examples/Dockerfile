@@ -18,10 +18,16 @@ RUN apt-get update && apt-get install -y \
     libreadline-dev \
     libfreetype6-dev \
     libxml2-dev \
+    libgmp-dev \
     g++
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
+RUN docker-php-ext-install bcmath
+
+RUN docker-php-ext-install gmp
+
 WORKDIR /var/code
+
 
 CMD ["tail", "-f", "/dev/null"]

@@ -1,6 +1,7 @@
 {
     "name": "flagsmith/flagsmith-php-client",
     "type": "library",
+    "version": "3.0.0",
     "license": "BSD-3-Clause",
     "authors": [
         {
@@ -20,11 +21,14 @@
         "guzzlehttp/guzzle": "^7.3",
         "guzzlehttp/psr7": "^2.1.0",
         "phpunit/phpunit": "^9.5",
-        "friendsofphp/php-cs-fixer": "^3.6"
+        "symfony/cache": "^5.4.6",
+        "friendsofphp/php-cs-fixer": "^3.6",
+        "doppiogancio/mocked-client": "^3.0"
     },
     "autoload": {
         "psr-4": {
-            "Flagsmith\\": "src"
+            "Flagsmith\\": "src",
+            "FlagsmithTest\\": "tests"
         }
     }
 }
