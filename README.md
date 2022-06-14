@@ -24,7 +24,7 @@ Since PHP requests are separate, there is little benefit to use local evaluation
 
 ## Adding to your project
 
-For full documentation visit [https://docs.flagsmith.com/clients/php/](https://docs.flagsmith.com/clients/php/)
+For full documentation visit [https://docs.flagsmith.com/clients/server-side](https://docs.flagsmith.com/clients/server-side).
 
 ## Contributing
 
