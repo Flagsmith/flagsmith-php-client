@@ -13,6 +13,8 @@ use Http\Discovery\Psr17FactoryDiscovery;
 
 class ClientFixtures
 {
+    private const DATA_DIR = __DIR__ . DIRECTORY_SEPARATOR . 'Data' . DIRECTORY_SEPARATOR ;
+
     public static function analyticsProcessor($client = null)
     {
         return new AnalyticsProcessor('api-key', 'http://host', 5, $client);
@@ -44,13 +46,7 @@ class ClientFixtures
                 $rb->new()
                 ->withMethod('GET')
                 ->withPath('/api/v1/environment-document/')
-                ->withResponse(
-                    new Response(
-                        200,
-                        [],
-                        self::loadFileContents('environment.json')
-                    )
-                )
+                ->withFileResponse(self::DATA_DIR . 'environment.json')
                 ->build()
             );
 
@@ -59,7 +55,7 @@ class ClientFixtures
                 $rb->new()
                 ->withMethod('POST')
                 ->withPath('/api/v1/identities/')
-                ->withResponse(new Response(200, [], self::loadFileContents('identities.json')))
+                ->withFileResponse(self::DATA_DIR . 'identities.json')
                 ->build()
             );
 
@@ -68,7 +64,7 @@ class ClientFixtures
                 $rb->new()
                 ->withMethod('GET')
                 ->withPath('/api/v1/flags/')
-                ->withResponse(new Response(200, [], self::loadFileContents('flags.json')))
+                ->withFileResponse(self::DATA_DIR . 'flags.json')
                 ->build()
             );
         }
@@ -80,7 +76,7 @@ class ClientFixtures
 
     private static function loadFileContents(string $file)
     {
-        return file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'Data' . DIRECTORY_SEPARATOR . $file);
+        return file_get_contents(self::DATA_DIR . $file);
     }
 
     public static function localEvalFlagsmith()
