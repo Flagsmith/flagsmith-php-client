@@ -79,9 +79,9 @@ class AnalyticsProcessor
         $this->last_flushed = time();
     }
 
-    public function trackFeature(int $featureId)
+    public function trackFeature(string $featureName)
     {
-        $this->analytics_data[$featureId] = ($this->analytics_data[$featureId]  ?? 0) + 1;
+        $this->analytics_data[$featureName] = ($this->analytics_data[$featureName]  ?? 0) + 1;
         if ((time() - $this->last_flushed) > self::ANALYTICS_TIMER) {
             $this->flush();
         }

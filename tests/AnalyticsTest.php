@@ -12,18 +12,18 @@ class AnalyticsTest extends TestCase
     {
         $analyticsProcessor = ClientFixtures::analyticsProcessor();
 
-        $analyticsProcessor->trackFeature(1);
-        $this->assertEquals($analyticsProcessor->analytics_data[1], 1);
+        $analyticsProcessor->trackFeature("my_feature");
+        $this->assertEquals($analyticsProcessor->analytics_data["my_feature"], 1);
 
-        $analyticsProcessor->trackFeature(1);
-        $this->assertEquals($analyticsProcessor->analytics_data[1], 2);
+        $analyticsProcessor->trackFeature("my_feature");
+        $this->assertEquals($analyticsProcessor->analytics_data["my_feature"], 2);
     }
 
     public function testAnalyticsProcessorFlushClearsAnalyticsData()
     {
         $analyticsProcessor = ClientFixtures::analyticsProcessor();
 
-        $analyticsProcessor->trackFeature(1);
+        $analyticsProcessor->trackFeature("my_feature");
         $analyticsProcessor->flush();
         $this->assertEquals(count($analyticsProcessor->analytics_data), 0);
     }
@@ -36,7 +36,7 @@ class AnalyticsTest extends TestCase
         $client->expects($this->once())
             ->method('sendRequest');
 
-        $analyticsProcessor->trackFeature(1);
+        $analyticsProcessor->trackFeature("my_feature");
         $analyticsProcessor->flush();
     }
 
@@ -59,7 +59,7 @@ class AnalyticsTest extends TestCase
         $client->expects($this->once())
             ->method('sendRequest');
 
-        $analyticsProcessor->trackFeature(1);
+        $analyticsProcessor->trackFeature("my_feature");
         unset($analyticsProcessor);
     }
 }
