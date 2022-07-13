@@ -176,8 +176,8 @@ class Flags
             throw new FlagsmithClientError('Feature does not exist');
         }
 
-        if (isset($this->analytics_processor) && !empty($flag) && isset($flag->feature_id)) {
-            $this->analytics_processor->trackFeature($flag->feature_id);
+        if (isset($this->analytics_processor) && !empty($flag) && isset($flag->feature_name)) {
+            $this->analytics_processor->trackFeature($flag->feature_name);
         }
 
         return $flag;
