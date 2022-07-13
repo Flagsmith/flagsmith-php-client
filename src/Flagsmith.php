@@ -476,7 +476,7 @@ class Flagsmith
                 if (
                     !$this->useCacheAsFailover ||
                     !$this->cache->has($cacheKey)
-                   ) {
+                ) {
                     throw $e;
                 }
             }
