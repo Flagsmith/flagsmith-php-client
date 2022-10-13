@@ -13,7 +13,7 @@ class SegmentConditionModel
     use JsonSerializer;
 
     public string $operator;
-    public string $value;
+    public ?string $value;
     public ?string $property_;
     private array $keys = [];
 
@@ -50,7 +50,7 @@ class SegmentConditionModel
      * @param string $value
      * @return SegmentConditionModel
      */
-    public function withValue(string $value): self
+    public function withValue(?string $value): self
     {
         return $this->with('value', $value);
     }
