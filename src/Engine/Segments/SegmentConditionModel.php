@@ -83,6 +83,8 @@ class SegmentConditionModel
 
         if ('boolean' === gettype($traitValue)) {
             $castedValue = filter_var($castedValue, FILTER_VALIDATE_BOOLEAN);
+        } elseif ($this->operator === SegmentConditions::MODULO) {
+            return $this->matchesModuloTraitValue($traitValue);
         } else {
             settype($castedValue, gettype($traitValue));
         }
@@ -153,5 +155,23 @@ class SegmentConditionModel
         }
 
         return $condition;
+    }
+
+    private function matchesModuloTraitValue(mixed $traitValue)
+    {
+        $valueParts = explode("|", $this->value);
+
+        if (!is_numeric($valueParts[0]) || !is_numeric($valueParts[1]) || !is_numeric($traitValue)) {
+            return false;
+        }
+
+        $divisor = floatval($valueParts[0]);
+        $remainder = floatval($valueParts[1]);
+
+        if ($divisor == 0) {
+            return false;
+        }
+
+        return floatval($traitValue) % $divisor == $remainder;
     }
 }

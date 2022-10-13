@@ -14,4 +14,5 @@ class SegmentConditions
     public const NOT_EQUAL = 'NOT_EQUAL';
     public const REGEX = 'REGEX';
     public const PERCENTAGE_SPLIT = 'PERCENTAGE_SPLIT';
+    public const MODULO = 'MODULO';
 }
