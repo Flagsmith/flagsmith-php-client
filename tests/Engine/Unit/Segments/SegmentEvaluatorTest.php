@@ -119,8 +119,8 @@ class SegmentEvaluatorTest extends TestCase
             [
                 SegmentFixtures::segmentToCheckIfFooIsSet(),
                 [(new TraitModel())
-                    -> withTraitKey("foo")
-                    -> withTraitValue("bar")],
+                    -> withTraitKey('foo')
+                    -> withTraitValue('bar')],
                 true
             ],
             [
@@ -131,15 +131,15 @@ class SegmentEvaluatorTest extends TestCase
             [
                 SegmentFixtures::segmentToCheckIfFooIsSet(),
                 [(new TraitModel())
-                    -> withTraitKey("notfoo")
-                    -> withTraitValue("bar")],
+                    -> withTraitKey('notfoo')
+                    -> withTraitValue('bar')],
                 false
             ],
             [
                 SegmentFixtures::segmentToCheckIfFooIsNotSet(),
                 [(new TraitModel())
-                    -> withTraitKey("foo")
-                    -> withTraitValue("bar")],
+                    -> withTraitKey('foo')
+                    -> withTraitValue('bar')],
                 false
             ],
             [
@@ -150,8 +150,8 @@ class SegmentEvaluatorTest extends TestCase
             [
                 SegmentFixtures::segmentToCheckIfFooIsNotSet(),
                 [(new TraitModel())
-                    -> withTraitKey("notfoo")
-                    -> withTraitValue("bar")],
+                    -> withTraitKey('notfoo')
+                    -> withTraitValue('bar')],
                 true
             ]
         ];
