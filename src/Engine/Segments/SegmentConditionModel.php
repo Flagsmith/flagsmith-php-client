@@ -159,7 +159,7 @@ class SegmentConditionModel
 
     private function matchesModuloTraitValue(mixed $traitValue)
     {
-        $valueParts = explode("|", $this->value);
+        $valueParts = explode('|', $this->value);
 
         if (!is_numeric($valueParts[0]) || !is_numeric($valueParts[1]) || !is_numeric($traitValue)) {
             return false;
