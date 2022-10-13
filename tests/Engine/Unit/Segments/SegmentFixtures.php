@@ -201,7 +201,7 @@ class SegmentFixtures
                             new SegmentConditionModelList([
                                 (new SegmentConditionModel())
                                     -> withValue(null)
-                                    -> withProperty("foo")
+                                    -> withProperty('foo')
                                     -> withOperator(SegmentConditions::IS_SET)
                             ])
                         )
@@ -222,7 +222,7 @@ class SegmentFixtures
                             new SegmentConditionModelList([
                                 (new SegmentConditionModel())
                                     -> withValue(null)
-                                    -> withProperty("foo")
+                                    -> withProperty('foo')
                                     -> withOperator(SegmentConditions::IS_NOT_SET)
                             ])
                         )
