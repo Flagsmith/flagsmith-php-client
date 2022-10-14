@@ -115,6 +115,44 @@ class SegmentEvaluatorTest extends TestCase
                         ->withTraitKey(SegmentFixtures::TRAIT_KEY_3)
                         ->withTraitValue(SegmentFixtures::TRAIT_VALUE_3)],
                 true
+            ],
+            [
+                SegmentFixtures::segmentToCheckIfFooIsSet(),
+                [(new TraitModel())
+                    -> withTraitKey('foo')
+                    -> withTraitValue('bar')],
+                true
+            ],
+            [
+                SegmentFixtures::segmentToCheckIfFooIsSet(),
+                [],
+                false
+            ],
+            [
+                SegmentFixtures::segmentToCheckIfFooIsSet(),
+                [(new TraitModel())
+                    -> withTraitKey('notfoo')
+                    -> withTraitValue('bar')],
+                false
+            ],
+            [
+                SegmentFixtures::segmentToCheckIfFooIsNotSet(),
+                [(new TraitModel())
+                    -> withTraitKey('foo')
+                    -> withTraitValue('bar')],
+                false
+            ],
+            [
+                SegmentFixtures::segmentToCheckIfFooIsNotSet(),
+                [],
+                true
+            ],
+            [
+                SegmentFixtures::segmentToCheckIfFooIsNotSet(),
+                [(new TraitModel())
+                    -> withTraitKey('notfoo')
+                    -> withTraitValue('bar')],
+                true
             ]
         ];
     }

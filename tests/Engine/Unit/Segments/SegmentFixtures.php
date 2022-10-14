@@ -187,4 +187,46 @@ class SegmentFixtures
                 ])
             );
     }
+
+    public static function segmentToCheckIfFooIsSet()
+    {
+        return (new SegmentModel())
+            -> withId(7)
+            -> withName('segment_to_check_if_foo_is_set')
+            -> withRules(
+                new SegmentRuleModelList([
+                    (new SegmentRuleModel())
+                        -> withType(SegmentRules::ALL_RULE)
+                        -> withConditions(
+                            new SegmentConditionModelList([
+                                (new SegmentConditionModel())
+                                    -> withValue(null)
+                                    -> withProperty('foo')
+                                    -> withOperator(SegmentConditions::IS_SET)
+                            ])
+                        )
+                ])
+            );
+    }
+
+    public static function segmentToCheckIfFooIsNotSet()
+    {
+        return (new SegmentModel())
+            -> withId(7)
+            -> withName('segment_to_check_if_foo_is_not_set')
+            -> withRules(
+                new SegmentRuleModelList([
+                    (new SegmentRuleModel())
+                        -> withType(SegmentRules::ALL_RULE)
+                        -> withConditions(
+                            new SegmentConditionModelList([
+                                (new SegmentConditionModel())
+                                    -> withValue(null)
+                                    -> withProperty('foo')
+                                    -> withOperator(SegmentConditions::IS_NOT_SET)
+                            ])
+                        )
+                ])
+            );
+    }
 }
