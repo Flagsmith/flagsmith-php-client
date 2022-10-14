@@ -62,6 +62,13 @@ class SegmentModelsTest extends TestCase
             [SegmentConditions::REGEX, 'foo', '[a-z]+', true],
             [SegmentConditions::REGEX, 'FOO', '[a-z]+', false],
             [SegmentConditions::REGEX, '1.2.3', '\\d', true],
+            [SegmentConditions::MODULO, 2, '2|0', true],
+            [SegmentConditions::MODULO, 2.0, '2|0', true],
+            [SegmentConditions::MODULO, 2.0, '2.0|0', true],
+            [SegmentConditions::MODULO, 3, '2|0', false],
+            [SegmentConditions::MODULO, 'foo', '2|0', false],
+            [SegmentConditions::MODULO, 'foo', 'foo|bar', false],
+            [SegmentConditions::MODULO, 2, 'foo|bar', false],
         ];
     }
 
@@ -76,8 +83,8 @@ class SegmentModelsTest extends TestCase
             ->withValue($conditionValue);
 
         $this->assertEquals(
-            $segmentCondition->matchesTraitValue($traitValue),
-            $expectedResult
+            $expectedResult,
+            $segmentCondition->matchesTraitValue($traitValue)
         );
     }
     public function conditionParametersTraitVersionValues()
