@@ -116,7 +116,8 @@ class SegmentEvaluator
         $segmentId,
         $identityId
     ): bool {
-        if ($condition->getOperator() === SegmentConditions::PERCENTAGE_SPLIT) {
+        $operator = $condition->getOperator();
+        if ($operator === SegmentConditions::PERCENTAGE_SPLIT) {
             $value = floatval($condition->getValue());
             return (self::getHashObject()->getHashedPercentageForObjectIds(
                 [$segmentId, $identityId]
@@ -129,9 +130,15 @@ class SegmentEvaluator
             $it->getTraitKey() === $condition->getProperty()
         );
 
-        $trait = count($matchingTraits) > 0 ? array_shift($matchingTraits) : false;
+        $matchingTrait = array_shift($matchingTraits);
 
-        return $trait ? $condition->matchesTraitValue($trait->getTraitValue()) : false;
+        if ($operator === SegmentConditions::IS_SET) {
+            return !is_null($matchingTrait);
+        } elseif ($operator == SegmentConditions::IS_NOT_SET) {
+            return is_null($matchingTrait);
+        }
+
+        return !is_null($matchingTrait) ? $condition->matchesTraitValue($matchingTrait->getTraitValue()) : false;
     }
 
     /**
