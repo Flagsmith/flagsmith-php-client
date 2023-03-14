@@ -30,10 +30,5 @@
             "Flagsmith\\": "src",
             "FlagsmithTest\\": "tests"
         }
-    },
-    "config": {
-        "allow-plugins": {
-            "php-http/discovery": true
-        }
     }
 }
