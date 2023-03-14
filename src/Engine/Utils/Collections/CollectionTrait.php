@@ -23,6 +23,7 @@ trait CollectionTrait
      * Returns the object to JSON serialize.
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
         return $this->getArrayCopy();
