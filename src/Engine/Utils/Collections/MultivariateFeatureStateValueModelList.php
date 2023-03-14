@@ -14,6 +14,7 @@ class MultivariateFeatureStateValueModelList extends \ArrayObject implements \Js
      * Returns the object to JSON serialize.
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
         $stateValues = $this->getArrayCopy();
