@@ -13,6 +13,7 @@ use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
 use Flagsmith\Exceptions\APIException;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
+use Flagsmith\Exceptions\FlagsmithThrowable;
 use Flagsmith\Models\Flags;
 use Flagsmith\Models\Segment;
 use Flagsmith\Utils\AnalyticsProcessor;
@@ -52,6 +53,9 @@ class Flagsmith
     private array $headers = [];
     private ?EnvironmentModel $environment = null;
 
+    /**
+     * @throws ValueError
+     */
     public function __construct(
         string $apiKey,
         string $host = self::DEFAULT_API_URL,
@@ -262,6 +266,8 @@ class Flagsmith
     /**
      * Get all the default for flags for the current environment.
      * @return Flags
+     *
+     * @throws FlagsmithThrowable
      */
     public function getEnvironmentFlags(): Flags
     {
@@ -279,6 +285,8 @@ class Flagsmith
      * @param string $identifier
      * @param object|null $traits
      * @return Flags
+     *
+     * @throws FlagsmithThrowable
      */
     public function getIdentityFlags(string $identifier, ?object $traits = null): Flags
     {
@@ -297,6 +305,8 @@ class Flagsmith
      * @param object|null $traits a dictionary of traits to add / update on the identity in
      *      Flagsmith, e.g. {"num_orders": 10}
      * @return array
+     *
+     * @throws FlagsmithThrowable
      */
     public function getIdentitySegments(string $identifier, ?object $traits = null): array
     {
@@ -316,6 +326,8 @@ class Flagsmith
     /**
      * Externalised method to update the environement cache.
      * @return void
+     *
+     * @throws FlagsmithThrowable
      */
     public function updateEnvironment()
     {
@@ -327,6 +339,8 @@ class Flagsmith
     /**
      * Get the environment API.
      * @return EnvironmentModel
+     *
+     * @throws FlagsmithAPIError
      */
     private function getEnvironmentFromApi(): EnvironmentModel
     {
@@ -353,6 +367,8 @@ class Flagsmith
      * @param string $identifier
      * @param object $traits
      * @return Flags
+     *
+     * @throws FlagsmithClientError
      */
     private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
     {
@@ -370,6 +386,8 @@ class Flagsmith
     /**
      * Get environment flags from API.
      * @return Flags
+     *
+     * @throws FlagsmithAPIError
      */
     private function getEnvironmentFlagsFromApi(): Flags
     {
@@ -393,6 +411,8 @@ class Flagsmith
      * Get the identity flags from API.
      *
      * @return Flags
+     *
+     * @throws FlagsmithAPIError
      */
     private function getIdentityFlagsFromApi(string $identifier, ?object $traits): Flags
     {
@@ -425,6 +445,8 @@ class Flagsmith
      * @param string $identifier
      * @param array|null $traits
      * @return IdentityModel
+     *
+     * @throws FlagsmithClientError
      */
     private function buildIdentityModel(string $identifier, ?object $traits): IdentityModel
     {
@@ -454,6 +476,8 @@ class Flagsmith
      * @param array $body
      * @param boolean $skipCache
      * @return object|array
+     *
+     * @throws FlagsmithAPIError
      */
     private function cachedCall(
         string $cacheKey,
@@ -472,7 +496,7 @@ class Flagsmith
             try {
                 $response = $this->call($method, $uri, $body);
                 $this->cache->set($cacheKey, $response, $ttl);
-            } catch (APIException $e) {
+            } catch (FlagsmithAPIError $e) {
                 if (
                     !$this->useCacheAsFailover ||
                     !$this->cache->has($cacheKey)
@@ -496,6 +520,8 @@ class Flagsmith
      * @param string $uri
      * @param array $body
      * @return object|array
+     *
+     * @throws FlagsmithAPIError
      */
     private function call(string $method, string $uri, array $body = [])
     {
