@@ -8,10 +8,9 @@ use Slim\Views\Twig;
 use Slim\Views\TwigMiddleware;
 
 require_once './vendor/autoload.php';
+$env = parse_ini_file('.env');
 
-const API_KEY = getenv('API_KEY');
-
-$flagsmith = (new Flagsmith(API_KEY))
+$flagsmith = (new Flagsmith($env['API_KEY']))
     ->withDefaultFlagHandler(function ($featureName) {
         $defaultFlag = (new DefaultFlag())
             ->withEnabled(false)->withValue(null);
