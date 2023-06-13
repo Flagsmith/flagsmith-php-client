@@ -15,7 +15,7 @@ return $config
         [
             '@PSR12' => true,
             'single_quote' => true,
-            'no_trailing_comma_in_singleline_array' => true,
+            'no_trailing_comma_in_singleline' => true,
             'array_indentation' => true,
             'phpdoc_indent' => true,
         ]
