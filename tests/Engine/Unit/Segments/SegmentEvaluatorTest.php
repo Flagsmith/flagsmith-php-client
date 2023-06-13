@@ -221,7 +221,7 @@ class SegmentEvaluatorTest extends TestCase
     {
         $percentageSplitCondition = (new SegmentConditionModel())
             ->withOperator(SegmentConditions::PERCENTAGE_SPLIT)
-            ->withValue("10");
+            ->withValue('10');
 
         $segmentRule = (new SegmentRuleModel())
             ->withType(SegmentRules::ALL_RULE)
@@ -256,6 +256,6 @@ class SegmentEvaluatorTest extends TestCase
 
         $result = SegmentEvaluator::evaluateIdentityInSegment($identityModel, $segmentModel);
 
-        $this->assertEquals($result, True);
+        $this->assertEquals($result, true);
     }
 }
