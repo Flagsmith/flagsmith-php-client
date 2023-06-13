@@ -35,14 +35,14 @@ $app->addErrorMiddleware(true, true, true);
 
 $app->get('/', function ($request, $response, $args) use ($flagsmith, $featureName) {
     $queryParams = $request->getQueryParams();
-    $flags = $flagsmith->getIdentityFlags(($queryParams['identifier'] ? $queryParams['identifier'] : ''));
+    $flags = $flagsmith->getIdentityFlags(($queryParams['identifier'] ?? ''));
 
     $view = Twig::fromRequest($request);
     return $view->render($response, 'index.html', [
-        'identifier' => $queryParams['identifier'],
-        'traitname' => $queryParams['traitname'],
-        'traitvalue' => $queryParams['traitvalue'],
-        'font_colour' => json_decode($flags->getFeatureValue($featureName)),
+        'identifier' => $queryParams['identifier'] ?? null,
+        'traitname' => $queryParams['traitname'] ?? null,
+        'traitvalue' => $queryParams['traitvalue'] ?? null,
+        'font_colour' => json_decode($flags->getFeatureValue($featureName) ?? '{"colour": "#ababab"}'),
         'enabled' => $flags->isFeatureEnabled($featureName)
     ]);
 })->setName('profile');
