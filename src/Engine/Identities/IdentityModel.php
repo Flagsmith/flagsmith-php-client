@@ -19,7 +19,7 @@ class IdentityModel
     public IdentityFeaturesList $identity_features;
     public IdentityTraitList $identity_traits;
     public string $identity_uuid;
-    public int $djangoId;
+    public ?int $django_id = null;
 
     protected array $keys = [
         'identity_features' => 'Flagsmith\Engine\Utils\Collections\IdentityFeaturesList',
@@ -76,19 +76,19 @@ class IdentityModel
      * Get the django ID.
      * @return int
      */
-    public function getDjangoId(): int
+    public function getDjangoId(): ?int
     {
         return $this->django_id;
     }
 
     /**
      * Build with Django ID.
-     * @param int $djangoId
+     * @param int $django_id
      * @return IdentityModel
      */
-    public function withDjangoId(int $djangoId): self
+    public function withDjangoId(int $django_id): self
     {
-        return $this->with('django_id', $djangoId);
+        return $this->with('django_id', $django_id);
     }
 
     /**
