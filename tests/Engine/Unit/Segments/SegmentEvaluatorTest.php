@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Flagsmith\Engine\Utils\Collections\SegmentConditionModelList;
 use Flagsmith\Engine\Utils\Collections\SegmentRuleModelList;
 use Flagsmith\Engine\Utils\Hashing;
+use Flagsmith\Models\Segment;
 use FlagsmithTest\Engine\Fixtures;
 
 class SegmentEvaluatorTest extends TestCase
@@ -188,7 +189,6 @@ class SegmentEvaluatorTest extends TestCase
      */
     public function testIdentityInSegmentPercentageSplit($segmentSplitValue, $identityHashedPercentage, $expectedResult)
     {
-        $this->assertTrue(true);
         $percentageSplitCondition = (new SegmentConditionModel())
             ->withOperator(SegmentConditions::PERCENTAGE_SPLIT)
             ->withValue("{$segmentSplitValue}");
@@ -215,5 +215,47 @@ class SegmentEvaluatorTest extends TestCase
         $result = SegmentEvaluator::evaluateIdentityInSegment(Fixtures::identity(), $segmentModel);
 
         $this->assertEquals($result, $expectedResult);
+    }
+
+    public function testIdentityInSegmentPercentageSplitUsesDjangoIdIfPresent()
+    {
+        $percentageSplitCondition = (new SegmentConditionModel())
+            ->withOperator(SegmentConditions::PERCENTAGE_SPLIT)
+            ->withValue('10');
+
+        $segmentRule = (new SegmentRuleModel())
+            ->withType(SegmentRules::ALL_RULE)
+            ->withConditions(
+                new SegmentConditionModelList([$percentageSplitCondition])
+            );
+
+        $segmentModel = (new SegmentModel())
+            ->withId(1)
+            ->withName('splitty')
+            ->withRules(
+                new SegmentRuleModelList([$segmentRule])
+            );
+
+        $identityModel = (new IdentityModel())
+                ->withIdentifier('identifier_1')
+                ->withEnvironmentApiKey(Fixtures::environment()->getApiKey())
+                ->withCreatedDate(new \DateTime('now'))
+                ->withDjangoId(1);
+
+        $hashingStub = $this->createMock(Hashing::class);
+        $hashingStub
+            ->method('getHashedPercentageForObjectIds')
+            ->will($this->returnValue(1));
+
+        $hashingStub
+            ->expects($this->once())
+            ->method('getHashedPercentageForObjectIds')
+            ->with($this->identicalTo(array($segmentModel->getId(), $identityModel->getDjangoId())));
+
+        SegmentEvaluator::setHashObject($hashingStub);
+
+        $result = SegmentEvaluator::evaluateIdentityInSegment($identityModel, $segmentModel);
+
+        $this->assertEquals($result, true);
     }
 }

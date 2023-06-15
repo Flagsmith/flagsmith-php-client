@@ -45,6 +45,7 @@ class SegmentEvaluator
         array $overrideTraits = null
     ): bool {
         $rulesCount = count($segment->getRules());
+        $identityId = ($identity->getDjangoId() != null) ? $identity->getDjangoId() : $identity->compositeKey();
 
         if (empty($rulesCount)) {
             return false;
@@ -55,7 +56,7 @@ class SegmentEvaluator
                 $overrideTraits ?? $identity->getIdentityTraits()->getArrayCopy(),
                 $rule,
                 $segment->getId(),
-                $identity->compositeKey()
+                $identityId
             );
 
             if (!$matchesRule) {
