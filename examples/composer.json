@@ -9,5 +9,10 @@
     "slim/twig-view": "^3.3",
     "nyholm/psr7-server": "^1.0",
     "php-http/cache-plugin": "^1.7"
+  },
+  "config": {
+    "allow-plugins": {
+      "php-http/discovery": true
+    }
   }
 }

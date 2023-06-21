@@ -10,7 +10,7 @@
 
 <body>
   <p>
-    Hello <span id="identifier-name">{{ identifier ? identifier : 'World!'}}</span>,
+    Hello <span id="identifier-name">{{ identifier|default('World!') }}</span>,
   </p>
   {% if enabled %}
  <button id="secret-button" style="color: {{ font_colour.colour }};">Secret Button</button>
@@ -19,14 +19,14 @@
   <form id="form" method="get">
     <h3>Identify as a user</h3>
     <label for="identifier">Identifier: </label>
-    <input name="identifier" id="identifier" />
+    <input name="identifier" id="identifier" value="{{ identifier|default('') }}"/>
     <br />
     <p>... with an optional user trait</p>
     <label for="trait-key">Trait Key: </label>
-    <input name="traitname" id="trait-key" /><br />{{ traitname ? traitname : ''}}
+    <input name="traitname" id="trait-key" value="{{ traitname|default('') }}"/><br />
 
     <label for="trait-value">Trait Value: </label>
-    <input name="traitname" id="trait-value" /><br />{{ traitvalue ? traitvalue : ''}}
+    <input name="traitvalue" id="trait-value" value="{{ traitvalue|default('') }}"/><br />
 
     <button type="submit">Identify!</button>
   </form>
