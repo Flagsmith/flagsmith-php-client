@@ -80,13 +80,14 @@ class SegmentConditionModel
     {
         $condition = false;
         $castedValue = $this->value;
+        $traitValueType = gettype($traitValue);
 
-        if ('boolean' === gettype($traitValue)) {
+        if ($traitValueType == 'boolean') {
             $castedValue = filter_var($castedValue, FILTER_VALIDATE_BOOLEAN);
         } elseif ($this->operator === SegmentConditions::MODULO) {
             return $this->matchesModuloTraitValue($traitValue);
         } else {
-            settype($castedValue, gettype($traitValue));
+            settype($castedValue, $traitValueType);
         }
 
         if (is_string($castedValue) && Semver::isSemver($castedValue)) {
@@ -125,6 +126,11 @@ class SegmentConditionModel
             case (SegmentConditions::REGEX):
                 $matchesCount = preg_match_all("/{$castedValue}/", (string) $traitValue);
                 $condition = $matchesCount && $matchesCount > 0;
+                break;
+            case (SegmentConditions::IN):
+                if (in_array($traitValueType, ['string', 'integer'])) {
+                    $condition = in_array((string) $traitValue, explode(',', (string) $this->value));
+                }
                 break;
         }
 

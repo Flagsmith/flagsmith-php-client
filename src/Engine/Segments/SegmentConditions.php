@@ -17,4 +17,5 @@ class SegmentConditions
     public const IS_SET = 'IS_SET';
     public const IS_NOT_SET = 'IS_NOT_SET';
     public const MODULO = 'MODULO';
+    public const IN = 'IN';
 }

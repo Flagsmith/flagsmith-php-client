@@ -59,6 +59,18 @@ class SegmentModelsTest extends TestCase
             [SegmentConditions::NOT_CONTAINS, 'bar', 'b', false],
             [SegmentConditions::NOT_CONTAINS, 'bar', 'bar', false],
             [SegmentConditions::NOT_CONTAINS, 'bar', 'baz', true],
+            [SegmentConditions::IN, 'foo', '', false],
+            [SegmentConditions::IN, 'ba', 'foo,bar', false],
+            [SegmentConditions::IN, 'foo', 'foo,bar', true],
+            [SegmentConditions::IN, 'bar', 'foo,bar', true],
+            [SegmentConditions::IN, 'foo', 'foo', true],
+            [SegmentConditions::IN, 1, '1,2,3,4', true],
+            [SegmentConditions::IN, 1, '', false],
+            [SegmentConditions::IN, 1, '1', true],
+            // Flagsmith's engine does not evaluate `IN` condition for floats/doubles and booleans
+            // due to ambiguous serialization across supported platforms.
+            [SegmentConditions::IN, 1.5, '1.5', false],
+            [SegmentConditions::IN, false, 'false', false],
             [SegmentConditions::REGEX, 'foo', '[a-z]+', true],
             [SegmentConditions::REGEX, 'FOO', '[a-z]+', false],
             [SegmentConditions::REGEX, '1.2.3', '\\d', true],
