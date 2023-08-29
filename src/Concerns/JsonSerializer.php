@@ -23,7 +23,7 @@ trait JsonSerializer
      */
     protected function setValues($values)
     {
-        if (is_array($values) || is_object($values)) {
+        if ($values !== null) {
             foreach ($values as $key => $value) {
                 if (isset($this->keys[$key])) {
                     $className = $this->keys[$key];
