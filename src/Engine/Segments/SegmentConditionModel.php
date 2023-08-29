@@ -115,7 +115,7 @@ class SegmentConditionModel
                 $condition = $traitValue <= $castedValue;
                 break;
             case (SegmentConditions::NOT_EQUAL):
-                $condition = $traitValue !=$castedValue;
+                $condition = $traitValue != $castedValue;
                 break;
             case (SegmentConditions::CONTAINS):
                 $condition = strpos($traitValue, (string) $castedValue) !== false;
