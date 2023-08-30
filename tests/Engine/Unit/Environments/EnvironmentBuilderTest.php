@@ -165,5 +165,6 @@ class EnvironmentBuilderTest extends TestCase
 
         $environment = EnvironmentAPIKeyModel::build($environmentDict);
         $this->assertEquals($environment->getKey(), $environmentDict->key);
+        $this->assertNull($environment->expires_at);
     }
 }
