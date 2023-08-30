@@ -7,6 +7,7 @@ use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Utils\Collections\SegmentConditionModelList;
 use Flagsmith\Engine\Utils\Collections\SegmentRuleModelList;
 
+#[\AllowDynamicProperties]
 class SegmentRuleModel
 {
     use HasWith;

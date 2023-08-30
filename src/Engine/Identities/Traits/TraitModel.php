@@ -5,6 +5,7 @@ namespace Flagsmith\Engine\Identities\Traits;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 
+#[\AllowDynamicProperties]
 class TraitModel
 {
     use HasWith;

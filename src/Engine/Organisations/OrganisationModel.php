@@ -5,6 +5,7 @@ namespace Flagsmith\Engine\Organisations;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 
+#[\AllowDynamicProperties]
 class OrganisationModel
 {
     use HasWith;

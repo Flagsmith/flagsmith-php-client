@@ -7,6 +7,7 @@ use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Organisations\OrganisationModel;
 use Flagsmith\Engine\Utils\Collections\SegmentModelList;
 
+#[\AllowDynamicProperties]
 class ProjectModel
 {
     use HasWith;

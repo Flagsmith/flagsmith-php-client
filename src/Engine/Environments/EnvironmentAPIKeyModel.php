@@ -6,6 +6,7 @@ use DateTime;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 
+#[\AllowDynamicProperties]
 class EnvironmentAPIKeyModel
 {
     use HasWith;

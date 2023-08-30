@@ -7,6 +7,7 @@ use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Segments\SegmentConditions;
 use Flagsmith\Engine\Utils\Semver;
 
+#[\AllowDynamicProperties]
 class SegmentConditionModel
 {
     use HasWith;

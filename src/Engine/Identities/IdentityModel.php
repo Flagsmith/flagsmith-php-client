@@ -9,6 +9,7 @@ use Flagsmith\Engine\Utils\Collections\IdentityFeaturesList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
 use Flagsmith\Engine\Utils\UniqueUID;
 
+#[\AllowDynamicProperties]
 class IdentityModel
 {
     use HasWith;
