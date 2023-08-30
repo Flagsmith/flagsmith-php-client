@@ -23,18 +23,19 @@ trait JsonSerializer
      */
     protected function setValues($values)
     {
-        if ($values !== null) {
-            foreach ($values as $key => $value) {
-                if (isset($this->keys[$key])) {
-                    $className = $this->keys[$key];
-                    if (method_exists($className, 'build')) {
-                        $this->{ $key } = $className::build($value);
-                    } else {
-                        $this->{ $key } = new $className($value);
-                    }
-                } else {
-                    $this->{ $key } = $value;
+        foreach ($values as $key => $value) {
+            if (isset($this->keys[$key])) {
+                if (null === $value) {
+                    continue;
                 }
+                $className = $this->keys[$key];
+                if (method_exists($className, 'build')) {
+                    $this->{$key} = $className::build($value);
+                } else {
+                    $this->{$key} = new $className($value);
+                }
+            } else {
+                $this->{$key} = $value;
             }
         }
     }
