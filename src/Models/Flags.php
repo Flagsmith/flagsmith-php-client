@@ -91,7 +91,7 @@ class Flags
         FeatureStateModelList $featureStateModelsList,
         ?AnalyticsProcessor $analyticsProcessor,
         ?\Closure $defaultFlagHandler,
-        $identityId =null
+        $identityId = null
     ) {
         $flags = [];
         foreach ($featureStateModelsList->getArrayCopy() as $featureState) {
@@ -116,7 +116,7 @@ class Flags
         object $apiFlags,
         ?AnalyticsProcessor $analyticsProcessor,
         ?\Closure $defaultFlagHandler,
-        $identityId =null
+        $identityId = null
     ) {
         $flags = [];
         foreach ($apiFlags as $apiFlag) {
