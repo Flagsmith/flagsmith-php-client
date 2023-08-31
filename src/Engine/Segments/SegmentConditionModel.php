@@ -7,6 +7,7 @@ use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Segments\SegmentConditions;
 use Flagsmith\Engine\Utils\Semver;
 
+#[\AllowDynamicProperties]
 class SegmentConditionModel
 {
     use HasWith;
@@ -115,7 +116,7 @@ class SegmentConditionModel
                 $condition = $traitValue <= $castedValue;
                 break;
             case (SegmentConditions::NOT_EQUAL):
-                $condition = $traitValue !=$castedValue;
+                $condition = $traitValue != $castedValue;
                 break;
             case (SegmentConditions::CONTAINS):
                 $condition = strpos($traitValue, (string) $castedValue) !== false;

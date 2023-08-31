@@ -8,6 +8,7 @@ use Flagsmith\Engine\Environments\Integrations\IntegrationModel;
 use Flagsmith\Engine\Projects\ProjectModel;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 
+#[\AllowDynamicProperties]
 class EnvironmentModel
 {
     use HasWith;

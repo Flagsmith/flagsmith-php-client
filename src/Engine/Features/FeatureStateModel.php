@@ -8,6 +8,7 @@ use Flagsmith\Engine\Utils\Collections\MultivariateFeatureStateValueModelList;
 use Flagsmith\Engine\Utils\HashingTrait;
 use Flagsmith\Engine\Utils\UniqueUID;
 
+#[\AllowDynamicProperties]
 class FeatureStateModel
 {
     use HasWith, HashingTrait, JsonSerializer {

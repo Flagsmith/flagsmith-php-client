@@ -5,6 +5,7 @@ namespace Flagsmith\Engine\Environments\Integrations;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 
+#[\AllowDynamicProperties]
 class IntegrationModel
 {
     use HasWith;

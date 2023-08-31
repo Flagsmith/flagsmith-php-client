@@ -5,6 +5,7 @@ namespace Flagsmith\Engine\Features;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 
+#[\AllowDynamicProperties]
 class FeatureSegmentModel
 {
     use HasWith;

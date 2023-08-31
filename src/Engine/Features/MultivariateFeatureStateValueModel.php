@@ -6,6 +6,7 @@ use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Utils\UniqueUID;
 
+#[\AllowDynamicProperties]
 class MultivariateFeatureStateValueModel
 {
     use HasWith;
