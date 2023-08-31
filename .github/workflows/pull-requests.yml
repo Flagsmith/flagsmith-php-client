@@ -27,7 +27,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          version: "{{ matrix.php-version }}"
+          php-version: ${{ matrix.php-version }}
           tools: php-cs-fixer, phpunit
           extensions: "bcmath, gmp"
 

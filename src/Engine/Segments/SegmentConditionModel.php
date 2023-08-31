@@ -164,7 +164,7 @@ class SegmentConditionModel
         return $condition;
     }
 
-    private function matchesModuloTraitValue(mixed $traitValue)
+    private function matchesModuloTraitValue($traitValue)
     {
         $valueParts = explode('|', $this->value);
 
