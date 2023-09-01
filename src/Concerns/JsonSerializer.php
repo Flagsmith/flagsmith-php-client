@@ -25,14 +25,17 @@ trait JsonSerializer
     {
         foreach ($values as $key => $value) {
             if (isset($this->keys[$key])) {
+                if (null === $value) {
+                    continue;
+                }
                 $className = $this->keys[$key];
                 if (method_exists($className, 'build')) {
-                    $this->{ $key } = $className::build($value);
+                    $this->{$key} = $className::build($value);
                 } else {
-                    $this->{ $key} = new $className($value);
+                    $this->{$key} = new $className($value);
                 }
             } else {
-                $this->{ $key } = $value;
+                $this->{$key} = $value;
             }
         }
     }
