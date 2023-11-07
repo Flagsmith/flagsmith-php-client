@@ -491,22 +491,28 @@ class Flagsmith
             return $this->call($method, $uri, $body);
         }
 
-        //If $skipCache, or skipCache(), or the key does not exist then call the API
-        if ($skipCache || $this->skipCache() || !$this->cache->has($cacheKey)) {
-            try {
-                $response = $this->call($method, $uri, $body);
-                $this->cache->set($cacheKey, $response, $ttl);
-            } catch (FlagsmithAPIError $e) {
-                if (
-                    !$this->useCacheAsFailover ||
-                    !$this->cache->has($cacheKey)
-                ) {
-                    throw $e;
-                }
+        if (!$skipCache && !$this->skipCache()) {
+            $cachedCall = $this->cache->get($cacheKey);
+            if (\is_array($cachedCall) || \is_object($cachedCall)) {
+                return $cachedCall;
             }
         }
 
-        return $this->cache->get($cacheKey);
+        try {
+            $response = $this->call($method, $uri, $body);
+            $this->cache->set($cacheKey, $response, $ttl);
+
+            return $response;
+        } catch (FlagsmithAPIError $e) {
+            if ($this->useCacheAsFailover) {
+                $cachedCall = $this->cache->get($cacheKey);
+                if (\is_array($cachedCall) || \is_object($cachedCall)) {
+                    return $cachedCall;
+                }
+            }
+
+            throw $e;
+        }
     }
 
     /**
