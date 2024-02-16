@@ -255,6 +255,18 @@ class Flagsmith
     }
 
     /**
+     * Whether to use the Cache as a failover for server errors
+     *
+     * @param bool $useCacheAsFailover
+     *
+     * @return self
+     */
+    public function withUseCacheAsFailover(bool $useCacheAsFailover): self
+    {
+        return $this->with('useCacheAsFailover', $useCacheAsFailover);
+    }
+
+    /**
      * Get the environment model.
      * @return EnvironmentModel
      */
