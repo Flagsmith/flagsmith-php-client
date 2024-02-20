@@ -256,9 +256,9 @@ class Flagsmith
 
     /**
      * Get the environment model.
-     * @return EnvironmentModel
+     * @return EnvironmentModel|null
      */
-    public function getEnvironment(): EnvironmentModel
+    public function getEnvironment(): ?EnvironmentModel
     {
         return $this->environment;
     }
