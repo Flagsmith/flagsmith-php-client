@@ -418,8 +418,9 @@ class Flagsmith
     {
         try {
             $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
+            $cacheKey = IdentitiesGenerator::generateIdentitiesCacheKey($identifier, $traits);
             $apiFlags = $this->cachedCall(
-                'Identity.'.$identifier,
+                $cacheKey,
                 'POST',
                 $this->identities_url,
                 $data
