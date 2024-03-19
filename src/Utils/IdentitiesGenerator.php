@@ -23,6 +23,7 @@ class IdentitiesGenerator
     public static function generateIdentitiesCacheKey(string $identifier, ?object $traits)
     {
         $hashedTraits = $traits !== null ? '.'.sha1(serialize($traits)) : '';
-        return 'Identity.'.$identifier.$hashedTraits;
+        $hashedIdentifier = sha1($identifier);
+        return 'Identity.'.$hashedIdentifier.$hashedTraits;
     }
 }
