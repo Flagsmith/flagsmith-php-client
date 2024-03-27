@@ -327,7 +327,7 @@ class Flagsmith
         }
 
         $traits = $traits ?? (object)[];
-        $identityModel = $this->buildIdentityModel($identifier, $traits);
+        $identityModel = $this->getIdentityModel($identifier, $traits);
         $segmentModels = SegmentEvaluator::getIdentitySegments($this->environment, $identityModel);
 
         return array_map(fn ($segment) => (new Segment())
@@ -384,7 +384,7 @@ class Flagsmith
      */
     private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
     {
-        $identityModel = $this->buildIdentityModel($identifier, $traits);
+        $identityModel = $this->getIdentityModel($identifier, $traits);
         $featureStates = Engine::getIdentityFeatureStates($this->environment, $identityModel);
 
         return Flags::fromFeatureStateModels(
@@ -461,7 +461,7 @@ class Flagsmith
      *
      * @throws FlagsmithClientError
      */
-    private function buildIdentityModel(string $identifier, ?object $traits): IdentityModel
+    private function getIdentityModel(string $identifier, ?object $traits): IdentityModel
     {
         if (empty($this->environment)) {
             throw new FlagsmithClientError('Unable to build identity model when no local environment present.');
@@ -474,10 +474,16 @@ class Flagsmith
                 ->withTraitValue($value);
         }
 
-        return (new IdentityModel())
-            ->withIdentifier($identifier)
-            ->withEnvironmentApiKey($this->apiKey)
-            ->withIdentityTraits(new IdentityTraitList($traitModels));
+        $identityModel = isset($this->environment->identity_overrides) ? $this->environment->identity_overrides[$identifier] ?? null : null;
+
+        if (is_null($identityModel)) {
+            return (new IdentityModel())
+                ->withIdentifier($identifier)
+                ->withEnvironmentApiKey($this->apiKey)
+                ->withIdentityTraits(new IdentityTraitList($traitModels));
+        }
+
+        return $identityModel->withIdentityTraits(new IdentityTraitList($traitModels));
     }
 
     /**
