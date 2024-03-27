@@ -12,7 +12,8 @@ class IdentityList extends \ArrayObject implements \JsonSerializable
      * @param IdentityModel $value
      * @return void
      */
-    public function offsetSet($offset, $value): void {
+    public function offsetSet($offset, $value): void
+    {
         parent::offsetSet($value->identifier, $value);
     }
 }
