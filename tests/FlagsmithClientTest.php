@@ -279,4 +279,19 @@ class FlagsmithClientTest extends TestCase
             $this->assertEquals($segments[0]->getName(), 'Test segment');
         }
     }
+
+    public function testLocalEvaluationGetIdentityOverride()
+    {
+        foreach (ClientFixtures::localEvalFlagsmith() as $flagsmith) {
+            $identifier = 'overridden-id';
+            $featureName = 'some_feature';
+
+            $identityFlags = $flagsmith->getIdentityFlags($identifier);
+
+            $flag = $identityFlags->getFlag($featureName);
+
+            $this->assertEquals($flag->enabled, false);
+            $this->assertEquals($flag->value, 'some-overridden-value');
+        }
+    }
 }
