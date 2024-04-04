@@ -6,7 +6,9 @@ use Flagsmith\Concerns\HasWith;
 use Flagsmith\Concerns\JsonSerializer;
 use Flagsmith\Engine\Environments\Integrations\IntegrationModel;
 use Flagsmith\Engine\Projects\ProjectModel;
+use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
+use Flagsmith\Engine\Utils\Collections\IdentityList;
 
 #[\AllowDynamicProperties]
 class EnvironmentModel
@@ -16,17 +18,11 @@ class EnvironmentModel
     public int $id;
     public string $api_key;
     public FeatureStateModelList $feature_states;
-    public IntegrationModel $segment_config;
-    public IntegrationModel $heap_config;
-    public IntegrationModel $mixpanel_config;
-    public IntegrationModel $amplitude_config;
+    public IdentityList $identity_overrides;
     public ProjectModel $project;
     private array $keys = [
+        'identity_overrides' => 'Flagsmith\Engine\Utils\Collections\IdentityList',
         'feature_states' => 'Flagsmith\Engine\Utils\Collections\FeatureStateModelList',
-        'segment_config' => 'Flagsmith\Engine\Environments\Integrations\IntegrationModel',
-        'heap_config' => 'Flagsmith\Engine\Environments\Integrations\IntegrationModel',
-        'mixpanel_config' => 'Flagsmith\Engine\Environments\Integrations\IntegrationModel',
-        'amplitude_config' => 'Flagsmith\Engine\Environments\Integrations\IntegrationModel',
         'project' => 'Flagsmith\Engine\Projects\ProjectModel',
     ];
 
