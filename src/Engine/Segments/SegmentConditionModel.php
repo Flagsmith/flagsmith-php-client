@@ -83,11 +83,11 @@ class SegmentConditionModel
         $castedValue = $this->value;
         $traitValueType = gettype($traitValue);
 
-        if ($traitValueType == 'boolean') {
+        if ($traitValueType === 'boolean') {
             $castedValue = filter_var($castedValue, FILTER_VALIDATE_BOOLEAN);
         } elseif ($this->operator === SegmentConditions::MODULO) {
             return $this->matchesModuloTraitValue($traitValue);
-        } else {
+        } elseif ($this->operator !== SegmentConditions::REGEX) {
             settype($castedValue, $traitValueType);
         }
 
@@ -101,7 +101,7 @@ class SegmentConditionModel
 
         switch ($this->operator) {
             case (SegmentConditions::EQUAL):
-                $condition = $traitValue == $castedValue;
+                $condition = $traitValue === $castedValue;
                 break;
             case (SegmentConditions::GREATER_THAN):
                 $condition = $traitValue > $castedValue;
@@ -116,7 +116,7 @@ class SegmentConditionModel
                 $condition = $traitValue <= $castedValue;
                 break;
             case (SegmentConditions::NOT_EQUAL):
-                $condition = $traitValue != $castedValue;
+                $condition = $traitValue !== $castedValue;
                 break;
             case (SegmentConditions::CONTAINS):
                 $condition = strpos($traitValue, (string) $castedValue) !== false;
@@ -130,7 +130,7 @@ class SegmentConditionModel
                 break;
             case (SegmentConditions::IN):
                 if (in_array($traitValueType, ['string', 'integer'])) {
-                    $condition = in_array((string) $traitValue, explode(',', (string) $this->value));
+                    $condition = in_array((string) $traitValue, explode(',', (string) $this->value), true);
                 }
                 break;
         }
