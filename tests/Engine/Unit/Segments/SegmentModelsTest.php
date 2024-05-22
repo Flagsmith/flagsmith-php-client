@@ -75,6 +75,7 @@ class SegmentModelsTest extends TestCase
             [SegmentConditions::REGEX, 'FOO', '[a-z]+', false],
             [SegmentConditions::REGEX, '1.2.3', '\\d', true],
             [SegmentConditions::REGEX, 123, '^\\d*[13579]$', true],
+            [SegmentConditions::REGEX, 122, '^\\d*[13579]$', false],
             [SegmentConditions::MODULO, 2, '2|0', true],
             [SegmentConditions::MODULO, 2.0, '2|0', true],
             [SegmentConditions::MODULO, 2.0, '2.0|0', true],
