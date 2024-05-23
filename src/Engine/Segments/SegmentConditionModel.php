@@ -87,7 +87,7 @@ class SegmentConditionModel
             $castedValue = filter_var($castedValue, FILTER_VALIDATE_BOOLEAN);
         } elseif ($this->operator === SegmentConditions::MODULO) {
             return $this->matchesModuloTraitValue($traitValue);
-        } elseif ($this->operator !== SegmentConditions::REGEX) {
+        } else {
             settype($castedValue, $traitValueType);
         }
 
@@ -119,13 +119,13 @@ class SegmentConditionModel
                 $condition = $traitValue !== $castedValue;
                 break;
             case (SegmentConditions::CONTAINS):
-                $condition = strpos($traitValue, (string) $castedValue) !== false;
+                $condition = strpos($traitValue, (string) $this->value) !== false;
                 break;
             case (SegmentConditions::NOT_CONTAINS):
-                $condition = strpos($traitValue, (string) $castedValue) === false;
+                $condition = strpos($traitValue, (string) $this->value) === false;
                 break;
             case (SegmentConditions::REGEX):
-                $matchesCount = preg_match_all("/{$castedValue}/", (string) $traitValue);
+                $matchesCount = preg_match_all("/{$this->value}/", (string) $traitValue);
                 $condition = $matchesCount && $matchesCount > 0;
                 break;
             case (SegmentConditions::IN):
