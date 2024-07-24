@@ -5,7 +5,7 @@ namespace Flagsmith\Concerns;
 trait HasWith
 {
     /**
-     * Clones class with new property
+     * Set the new property
      *
      * @param string $property
      * @param mixed $value
@@ -13,8 +13,7 @@ trait HasWith
      */
     protected function with(string $property, $value): self
     {
-        $self = clone $this;
-        $self->{$property} = $value;
-        return $self;
+        $this->{$property} = $value;
+        return $this;
     }
 }
