@@ -354,7 +354,7 @@ class Flagsmith
      *
      * @throws FlagsmithAPIError
      */
-    private function getEnvironmentFromApi(): EnvironmentModel
+    protected function getEnvironmentFromApi(): EnvironmentModel
     {
         $environmentDict = $this->cachedCall('Environment', 'GET', $this->environment_url, [], false, $this->environmentTtl);
 
@@ -365,7 +365,7 @@ class Flagsmith
      * Get the environment flags from document.
      * @return Flags
      */
-    private function getEnvironmentFlagsFromDocument(): Flags
+    protected function getEnvironmentFlagsFromDocument(): Flags
     {
         return Flags::fromFeatureStateModels(
             new FeatureStateModelList(Engine::getEnvironmentFeatureStates($this->environment)),
@@ -382,7 +382,7 @@ class Flagsmith
      *
      * @throws FlagsmithClientError
      */
-    private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
+    protected function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
     {
         $identityModel = $this->getIdentityModel($identifier, $traits);
         $featureStates = Engine::getIdentityFeatureStates($this->environment, $identityModel);
@@ -401,7 +401,7 @@ class Flagsmith
      *
      * @throws FlagsmithAPIError
      */
-    private function getEnvironmentFlagsFromApi(): Flags
+    protected function getEnvironmentFlagsFromApi(): Flags
     {
         try {
             $apiFlags = $this->cachedCall('Global', 'GET', $this->environment_flags_url);
@@ -426,7 +426,7 @@ class Flagsmith
      *
      * @throws FlagsmithAPIError
      */
-    private function getIdentityFlagsFromApi(string $identifier, ?object $traits): Flags
+    protected function getIdentityFlagsFromApi(string $identifier, ?object $traits): Flags
     {
         try {
             $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
