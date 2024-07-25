@@ -292,22 +292,28 @@ class Flagsmith
 
     /**
      * Get all the flags for the current environment for a given identity. Will also
-     *  upsert all traits to the Flagsmith API for future evaluations. Providing a
-     *  trait with a value of None will remove the trait from the identity if it exists.
+     *  upsert all traits to the Flagsmith API for future evaluations.
+     *
+     * Providing a trait with a value of None will remove the trait from the identity if it exists.
+     *
+     * To send a transient trait, use an object as value:
+     *
+     * `$flagsmith->getIdentityFlags($identifier, (object)['transient' => ['value' => 'no-persist', 'transient' => true]])->allFlags();`
+     *
      * @param string $identifier
      * @param object|null $traits
      * @return Flags
      *
      * @throws FlagsmithThrowable
      */
-    public function getIdentityFlags(string $identifier, ?object $traits = null): Flags
+    public function getIdentityFlags(string $identifier, ?object $traits = null, ?bool $transient = false): Flags
     {
-        $traits = $traits ?? (object) [];
+        $traits = $traits ?? (object)[];
         if ($this->environment) {
             return $this->getIdentityFlagsFromDocument($identifier, $traits);
         }
 
-        return $this->getIdentityFlagsFromApi($identifier, $traits);
+        return $this->getIdentityFlagsFromApi($identifier, $traits, $transient);
     }
 
     /**
@@ -426,11 +432,11 @@ class Flagsmith
      *
      * @throws FlagsmithAPIError
      */
-    private function getIdentityFlagsFromApi(string $identifier, ?object $traits): Flags
+    private function getIdentityFlagsFromApi(string $identifier, ?object $traits, ?bool $transient): Flags
     {
         try {
-            $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
-            $cacheKey = IdentitiesGenerator::generateIdentitiesCacheKey($identifier, $traits);
+            $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits, $transient);
+            $cacheKey = IdentitiesGenerator::generateIdentitiesCacheKey($identifier, $traits, $transient);
             $apiFlags = $this->cachedCall(
                 $cacheKey,
                 'POST',
