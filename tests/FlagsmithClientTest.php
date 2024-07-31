@@ -73,19 +73,47 @@ class FlagsmithClientTest extends TestCase
             ->withStreamFactory($streamMock);
 
         $identifier = 'identifer';
-        $traits = (object) ['some_trait' => 'some-value'];
-
-        $requestBody = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
+        $traits = (object)['some_trait' => 'some-value', 'transient_trait' => (object)['transient' => true, 'value' => 'some-transient-value']];
 
         $streamMock->expects($this->once())
             ->method('createStream')
-            ->with($this->equalTo(json_encode($requestBody)));
+            ->with($this->equalTo(json_encode([
+                'identifier' => $identifier,
+                'traits' => [
+                    ['trait_key' => 'some_trait', 'trait_value' => 'some-value'],
+                    ['trait_key' => 'transient_trait', 'trait_value' => 'some-transient-value', 'transient' => true],
+                ],
+            ])));
 
         $identityFlags = $flagsmith->getIdentityFlags($identifier, $traits)->allFlags();
 
         $this->assertTrue($identityFlags[0]->enabled);
         $this->assertEquals($identityFlags[0]->value, 'some-value');
         $this->assertEquals($identityFlags[0]->feature_name, 'some_feature');
+    }
+
+    public function testGetIdentityFlagsCallsApiWhenNoLocalEnvironmentTransient()
+    {
+        $streamMock = $this->createMock(StreamFactoryInterface::class);
+
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withClient(ClientFixtures::getMockClient())
+            ->withStreamFactory($streamMock);
+
+        $identifier = 'identifer';
+        $traits = (object)['some_trait' => 'some-value'];
+
+        $streamMock->expects($this->once())
+            ->method('createStream')
+            ->with($this->equalTo(json_encode([
+                'identifier' => $identifier,
+                'traits' => [
+                    ['trait_key' => 'some_trait', 'trait_value' => 'some-value'],
+                ],
+                'transient' => true,
+            ])));
+
+        $flagsmith->getIdentityFlags($identifier, $traits, true);
     }
 
     public function testRequestConnectionErrorRaisesFlagsmithApiError()

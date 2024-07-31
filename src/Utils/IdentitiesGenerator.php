@@ -4,26 +4,39 @@ namespace Flagsmith\Utils;
 
 class IdentitiesGenerator
 {
-    public static function generateIdentitiesData(string $identifier, ?object $traits)
+    public static function generateIdentitiesData(string $identifier, ?object $traits, ?bool $transient)
     {
-        $identities = [
+        $identityData = [
             'identifier' => $identifier,
             'traits' => [],
         ];
 
+        if ($transient) {
+            $identityData['transient'] = true;
+        }
+
         if (!empty($traits)) {
             foreach ($traits as $key => $value) {
-                $identities['traits'][] = ['trait_key' => $key, 'trait_value' => $value];
+                $traitData = ['trait_key' => $key];
+                if (is_object($value)) {
+                    $traitData['trait_value'] = $value->value;
+                    if ($value->transient) {
+                        $traitData['transient'] = true;
+                    }
+                } else {
+                    $traitData['trait_value'] = $value;
+                }
+                $identityData['traits'][] = $traitData;
             }
         }
 
-        return $identities;
+        return $identityData;
     }
 
-    public static function generateIdentitiesCacheKey(string $identifier, ?object $traits)
+    public static function generateIdentitiesCacheKey(string $identifier, ?object $traits, ?bool $transient)
     {
         $hashedTraits = $traits !== null ? '.'.sha1(serialize($traits)) : '';
         $hashedIdentifier = sha1($identifier);
-        return 'Identity.'.$hashedIdentifier.$hashedTraits;
+        return 'Identity.'.$transient ? 'Transient' : ''.$hashedIdentifier.$hashedTraits;
     }
 }
