@@ -3,8 +3,9 @@
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
-use Flagsmith\Utils\IdentitiesGenerator;
 use FlagsmithTest\ClientFixtures;
+use FlagsmithTest\Offline\FakeOfflineHandler;
+use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -321,5 +322,81 @@ class FlagsmithClientTest extends TestCase
             $this->assertEquals($flag->enabled, false);
             $this->assertEquals($flag->value, 'some-overridden-value');
         }
+    }
+
+    public function testOfflineMode() {
+        // Given
+        $flagsmith = (new Flagsmith(offlineMode:true, offlineHandler:new FakeOfflineHandler()));
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags("my-identity");
+
+        // Then
+        $this->assertEquals($environmentFlags->getFlag("some_feature")->enabled, true);
+        $this->assertEquals($environmentFlags->getFlag("some_feature")->value, "some-value");
+
+        $this->assertEquals($identityFlags->getFlag("some_feature")->enabled, true);
+        $this->assertEquals($identityFlags->getFlag("some_feature")->value, "some-value");
+    }
+
+    public function testFlagsmithUseOfflineHandlerIfSetAndNoApiResponse() {
+        // Given
+        $handlerBuilder = ClientFixtures::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+            ->withMethod('POST')
+            ->withPath('/api/v1/identities/')
+            ->withResponse(new Response(500))
+            ->build()
+        );
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+            ->withMethod('GET')
+            ->withPath('/api/v1/flags/')
+            ->withResponse(new Response(500))
+            ->build()
+        );
+
+        $flagsmith = (new Flagsmith(apiKey:"some-key", offlineHandler: new FakeOfflineHandler()))
+            ->withClient(ClientFixtures::getMockClient($handlerBuilder, false));
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags("my-identity");
+
+        // Then
+        $this->assertEquals($environmentFlags->getFlag("some_feature")->enabled, true);
+        $this->assertEquals($environmentFlags->getFlag("some_feature")->value, "some-value");
+
+        $this->assertEquals($identityFlags->getFlag("some_feature")->enabled, true);
+        $this->assertEquals($identityFlags->getFlag("some_feature")->value, "some-value");
+    }
+
+    public function testCannotUseOfflineModeWithoutOfflineHandler() {
+        // Given
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('offlineHandler must be provided to use offline mode.');
+
+        // When
+        new Flagsmith(offlineMode:true, offlineHandler:null);
+    }
+
+    public function testCannotUseDefaultHandlerAndOfflineHandler() {
+        // Given
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('Cannot use both defaultFlagHandler and offlineHandler.');
+
+        // When
+        new Flagsmith(offlineHandler:new FakeOfflineHandler());
+    }
+
+    public function testCannotCreateFlagsmithClientInRemoteEvaluationWithoutApiKey() {
+        // Given
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('environmentKey is required');
+
+        // When
+        new Flagsmith();
     }
 }
