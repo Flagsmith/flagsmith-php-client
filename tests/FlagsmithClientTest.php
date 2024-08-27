@@ -399,4 +399,29 @@ class FlagsmithClientTest extends TestCase
         // When
         new Flagsmith();
     }
+
+    public function testOfflineHandlerUsedAsFallbackForLocalEvaluation() {
+        // Given
+        $handlerBuilder = ClientFixtures::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+            ->withMethod('GET')
+            ->withPath('/api/v1/environment-document/')
+            ->withResponse(new Response(500))
+            ->build()
+        );
+
+        $flagsmith = (new Flagsmith(apiKey:"ser.some-key", environmentTtl:3, offlineHandler:new FakeOfflineHandler()));
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags("my-identity");
+
+        // Then
+        $this->assertEquals($environmentFlags->getFlag("some_feature")->enabled, true);
+        $this->assertEquals($environmentFlags->getFlag("some_feature")->value, "some-value");
+
+        $this->assertEquals($identityFlags->getFlag("some_feature")->enabled, true);
+        $this->assertEquals($identityFlags->getFlag("some_feature")->value, "some-value");
+    }
 }

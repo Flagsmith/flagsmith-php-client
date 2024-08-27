@@ -81,7 +81,7 @@ class Flagsmith
         }
 
         if (is_int($environmentTtl)) {
-            if (stripos($this->apiKey, 'ser.') === false) {
+            if (stripos($apiKey, 'ser.') === false) {
                 throw new ValueError(
                     'In order to use local evaluation, please generate a server key in the environment settings page.'
                 );
