@@ -327,7 +327,8 @@ class FlagsmithClientTest extends TestCase
     public function testOfflineMode()
     {
         // Given
-        $flagsmith = (new Flagsmith(offlineMode:true, offlineHandler:new FakeOfflineHandler()));
+        $offlineHandler = new FakeOfflineHandler();
+        $flagsmith = new Flagsmith(offlineMode: true, offlineHandler: $offlineHandler);
 
         // When
         $environmentFlags = $flagsmith->getEnvironmentFlags();
@@ -360,7 +361,7 @@ class FlagsmithClientTest extends TestCase
             ->build()
         );
 
-        $flagsmith = (new Flagsmith(apiKey:'some-key', offlineHandler: new FakeOfflineHandler()))
+        $flagsmith = (new Flagsmith(apiKey: 'some-key', offlineHandler: new FakeOfflineHandler()))
             ->withClient(ClientFixtures::getMockClient($handlerBuilder, false));
 
         // When
@@ -399,8 +400,10 @@ class FlagsmithClientTest extends TestCase
         $this->expectException(ValueError::class);
         $this->expectExceptionMessage('Cannot use both defaultFlagHandler and offlineHandler.');
 
+        $offlineHandler = new FakeOfflineHandler();
+
         // When
-        new Flagsmith(defaultFlagHandler:$defaultFlagHandler, offlineHandler:new FakeOfflineHandler());
+        new Flagsmith(defaultFlagHandler:$defaultFlagHandler, offlineHandler:$offlineHandler);
     }
 
     public function testCannotCreateFlagsmithClientInRemoteEvaluationWithoutApiKey()
@@ -425,7 +428,8 @@ class FlagsmithClientTest extends TestCase
             ->build()
         );
 
-        $flagsmith = (new Flagsmith(apiKey:'ser.some-key', environmentTtl:3, offlineHandler:new FakeOfflineHandler()));
+        $offlineHandler = new FakeOfflineHandler();
+        $flagsmith = (new Flagsmith(apiKey: 'ser.some-key', environmentTtl: 3, offlineHandler: $offlineHandler));
 
         // When
         $environmentFlags = $flagsmith->getEnvironmentFlags();
