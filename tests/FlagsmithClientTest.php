@@ -388,18 +388,26 @@ class FlagsmithClientTest extends TestCase
     public function testCannotUseDefaultHandlerAndOfflineHandler()
     {
         // Given
+        $defaultFlag = (new DefaultFlag())
+            ->withEnabled(true)
+            ->withValue('some-default-value');
+
+        $defaultFlagHandler = function (string $featureName) use ($defaultFlag) {
+            return $defaultFlag;
+        };
+
         $this->expectException(ValueError::class);
         $this->expectExceptionMessage('Cannot use both defaultFlagHandler and offlineHandler.');
 
         // When
-        new Flagsmith(offlineHandler:new FakeOfflineHandler());
+        new Flagsmith(defaultFlagHandler:$defaultFlagHandler, offlineHandler:new FakeOfflineHandler());
     }
 
     public function testCannotCreateFlagsmithClientInRemoteEvaluationWithoutApiKey()
     {
         // Given
         $this->expectException(ValueError::class);
-        $this->expectExceptionMessage('environmentKey is required');
+        $this->expectExceptionMessage('apiKey is required');
 
         // When
         new Flagsmith();
