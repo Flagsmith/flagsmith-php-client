@@ -6,6 +6,7 @@ namespace Flagsmith\Offline;
 
 use Flagsmith\Engine\Environments\EnvironmentModel;
 
-interface IOfflineHandler {
+interface IOfflineHandler
+{
     public function getEnvironment(): ?EnvironmentModel;
 }

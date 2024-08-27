@@ -97,7 +97,7 @@ class Flagsmith
 
         if (!$offlineMode) {
             if (is_null($apiKey)) {
-                throw new ValueError("apiKey is required.");
+                throw new ValueError('apiKey is required.');
             }
 
             $this->apiKey = $apiKey;
