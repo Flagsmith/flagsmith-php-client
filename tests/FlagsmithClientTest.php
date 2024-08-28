@@ -5,7 +5,6 @@ use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
 use FlagsmithTest\ClientFixtures;
 use FlagsmithTest\Offline\FakeOfflineHandler;
-use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamFactoryInterface;

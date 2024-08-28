@@ -12,7 +12,6 @@ class FakeOfflineHandler implements IOfflineHandler
 {
     public function getEnvironment(): ?EnvironmentModel
     {
-        print 'Getting environment from FakeOfflineHandler';
         return ClientFixtures::getEnvironmentModel();
     }
 }

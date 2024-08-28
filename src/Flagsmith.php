@@ -10,7 +10,6 @@ use Flagsmith\Engine\Identities\Traits\TraitModel;
 use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
-use Flagsmith\Exceptions\APIException;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Exceptions\FlagsmithThrowable;
@@ -28,14 +27,13 @@ use Http\Discovery\Psr18ClientDiscovery;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
-use Symfony\Component\VarExporter\Internal\Values;
 
 class Flagsmith
 {
     use HasWith;
     public const DEFAULT_API_URL = 'https://edge.api.flagsmith.com/api/v1';
     private ?string $apiKey;
-    private ?string $host = self::DEFAULT_API_URL;
+    private ?string $host;
     private ?object $customHeaders = null;
     private ?int $environmentTtl = null;
     private bool $enableLocalEvaluation = false;
@@ -101,7 +99,7 @@ class Flagsmith
             }
 
             $this->apiKey = $apiKey;
-            $this->host = rtrim($host ?? self::DEFAULT_API_URL, '/');
+            $this->host = !is_null($host) ? rtrim($host, '/') : self::DEFAULT_API_URL;
             $this->customHeaders = $customHeaders ?? $this->customHeaders;
             $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
             $this->enableLocalEvaluation = !is_null($environmentTtl);
