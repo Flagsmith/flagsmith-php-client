@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=8.1",
+        "php": ">=7.4",
         "php-http/discovery": "^1.14",
         "psr/simple-cache": ">=1.0",
         "psr/http-factory-implementation": "1.0",
