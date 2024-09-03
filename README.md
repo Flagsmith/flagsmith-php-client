@@ -15,7 +15,6 @@ The Flagsmith PHP SDK requires the following PHP extensions to be enabled. These
 
 - bc-math
 - gmp
-- json
 
 Please view the documentation here to install the extensions, if you haven't already. For [BC-Math](https://www.php.net/manual/en/bc.installation.php) and [GMP](https://www.php.net/manual/en/gmp.installation.php).
 
