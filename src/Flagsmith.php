@@ -10,12 +10,12 @@ use Flagsmith\Engine\Identities\Traits\TraitModel;
 use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
-use Flagsmith\Exceptions\APIException;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Exceptions\FlagsmithThrowable;
 use Flagsmith\Models\Flags;
 use Flagsmith\Models\Segment;
+use Flagsmith\Offline\IOfflineHandler;
 use Flagsmith\Utils\AnalyticsProcessor;
 use Flagsmith\Utils\IdentitiesGenerator;
 use Flagsmith\Utils\Retry;
@@ -32,10 +32,11 @@ class Flagsmith
 {
     use HasWith;
     public const DEFAULT_API_URL = 'https://edge.api.flagsmith.com/api/v1';
-    private string $apiKey;
-    private string $host = self::DEFAULT_API_URL;
+    private ?string $apiKey;
+    private ?string $host;
     private ?object $customHeaders = null;
     private ?int $environmentTtl = null;
+    private bool $enableLocalEvaluation = false;
     private Retry $retries;
     private ?AnalyticsProcessor $analyticsProcessor = null;
     private ?\Closure $defaultFlagHandler = null;
@@ -52,38 +53,65 @@ class Flagsmith
     private bool $useCacheAsFailover = false;
     private array $headers = [];
     private ?EnvironmentModel $environment = null;
+    private bool $offlineMode = false;
+    private ?IOfflineHandler $offlineHandler = null;
 
     /**
      * @throws ValueError
      */
     public function __construct(
-        string $apiKey,
-        string $host = self::DEFAULT_API_URL,
+        string $apiKey = null,
+        string $host = null,
         object $customHeaders = null,
         int $environmentTtl = null,
         Retry $retries = null,
         bool $enableAnalytics = false,
-        \Closure $defaultFlagHandler = null
+        \Closure $defaultFlagHandler = null,
+        bool $offlineMode = false,
+        IOfflineHandler $offlineHandler = null
     ) {
-        $this->apiKey = $apiKey;
-        $this->host = rtrim($host, '/');
-        $this->customHeaders = $customHeaders ?? $this->customHeaders;
-        $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
-        $this->retries = $retries ?? new Retry(3);
-        $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
-        $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
+        if ($offlineMode and is_null($offlineHandler)) {
+            throw new ValueError('offlineHandler must be provided to use offline mode.');
+        }
+
+        if (!is_null($offlineHandler) and !is_null($defaultFlagHandler)) {
+            throw new ValueError('Cannot use both defaultFlagHandler and offlineHandler.');
+        }
+
         if (is_int($environmentTtl)) {
-            if (stripos($this->apiKey, 'ser.') === false) {
+            if (stripos($apiKey, 'ser.') === false) {
                 throw new ValueError(
                     'In order to use local evaluation, please generate a server key in the environment settings page.'
                 );
             }
         }
 
-        //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
-        $this->client = Psr18ClientDiscovery::find();
-        $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
-        $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
+        $this->offlineMode = $offlineMode;
+        $this->offlineHandler = $offlineHandler;
+
+        if (!is_null($offlineHandler)) {
+            $this->environment = $offlineHandler->getEnvironment();
+        }
+
+        if (!$offlineMode) {
+            if (is_null($apiKey)) {
+                throw new ValueError('apiKey is required.');
+            }
+
+            $this->apiKey = $apiKey;
+            $this->host = !is_null($host) ? rtrim($host, '/') : self::DEFAULT_API_URL;
+            $this->customHeaders = $customHeaders ?? $this->customHeaders;
+            $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
+            $this->enableLocalEvaluation = !is_null($environmentTtl);
+            $this->retries = $retries ?? new Retry(3);
+            $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
+            $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
+
+            //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
+            $this->client = Psr18ClientDiscovery::find();
+            $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
+            $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
+        }
     }
 
     /**
@@ -283,7 +311,7 @@ class Flagsmith
      */
     public function getEnvironmentFlags(): Flags
     {
-        if ($this->environment) {
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->environment) {
             return $this->getEnvironmentFlagsFromDocument();
         }
 
@@ -292,22 +320,28 @@ class Flagsmith
 
     /**
      * Get all the flags for the current environment for a given identity. Will also
-     *  upsert all traits to the Flagsmith API for future evaluations. Providing a
-     *  trait with a value of None will remove the trait from the identity if it exists.
+     *  upsert all traits to the Flagsmith API for future evaluations.
+     *
+     * Providing a trait with a value of None will remove the trait from the identity if it exists.
+     *
+     * To send a transient trait, use an object as value:
+     *
+     * `$flagsmith->getIdentityFlags($identifier, (object)['transient' => ['value' => 'no-persist', 'transient' => true]])->allFlags();`
+     *
      * @param string $identifier
      * @param object|null $traits
      * @return Flags
      *
      * @throws FlagsmithThrowable
      */
-    public function getIdentityFlags(string $identifier, ?object $traits = null): Flags
+    public function getIdentityFlags(string $identifier, ?object $traits = null, ?bool $transient = false): Flags
     {
-        $traits = $traits ?? (object) [];
-        if ($this->environment) {
+        $traits = $traits ?? (object)[];
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->environment) {
             return $this->getIdentityFlagsFromDocument($identifier, $traits);
         }
 
-        return $this->getIdentityFlagsFromApi($identifier, $traits);
+        return $this->getIdentityFlagsFromApi($identifier, $traits, $transient);
     }
 
     /**
@@ -411,6 +445,9 @@ class Flagsmith
                 $this->defaultFlagHandler,
             );
         } catch (FlagsmithAPIError $e) {
+            if (isset($this->offlineHandler)) {
+                return $this->getEnvironmentFlagsFromDocument();
+            }
             if (isset($this->defaultFlagHandler)) {
                 return (new Flags())
                     ->withDefaultFlagHandler($this->defaultFlagHandler);
@@ -426,11 +463,11 @@ class Flagsmith
      *
      * @throws FlagsmithAPIError
      */
-    private function getIdentityFlagsFromApi(string $identifier, ?object $traits): Flags
+    private function getIdentityFlagsFromApi(string $identifier, ?object $traits, ?bool $transient): Flags
     {
         try {
-            $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
-            $cacheKey = IdentitiesGenerator::generateIdentitiesCacheKey($identifier, $traits);
+            $data = IdentitiesGenerator::generateIdentitiesData($identifier, $traits, $transient);
+            $cacheKey = IdentitiesGenerator::generateIdentitiesCacheKey($identifier, $traits, $transient);
             $apiFlags = $this->cachedCall(
                 $cacheKey,
                 'POST',
@@ -444,6 +481,9 @@ class Flagsmith
                 $this->defaultFlagHandler,
             );
         } catch (FlagsmithAPIError $e) {
+            if (isset($this->offlineHandler)) {
+                return $this->getIdentityFlagsFromDocument($identifier, $traits);
+            }
             if (isset($this->defaultFlagHandler)) {
                 return (new Flags())
                     ->withDefaultFlagHandler($this->defaultFlagHandler);
@@ -479,7 +519,7 @@ class Flagsmith
         if (is_null($identityModel)) {
             return (new IdentityModel())
                 ->withIdentifier($identifier)
-                ->withEnvironmentApiKey($this->apiKey)
+                ->withEnvironmentApiKey($this->environment->getApiKey())
                 ->withIdentityTraits(new IdentityTraitList($traitModels));
         }
 

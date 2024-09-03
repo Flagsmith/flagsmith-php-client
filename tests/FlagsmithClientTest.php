@@ -3,8 +3,8 @@
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
-use Flagsmith\Utils\IdentitiesGenerator;
 use FlagsmithTest\ClientFixtures;
+use FlagsmithTest\Offline\FakeOfflineHandler;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -73,19 +73,47 @@ class FlagsmithClientTest extends TestCase
             ->withStreamFactory($streamMock);
 
         $identifier = 'identifer';
-        $traits = (object) ['some_trait' => 'some-value'];
-
-        $requestBody = IdentitiesGenerator::generateIdentitiesData($identifier, $traits);
+        $traits = (object)['some_trait' => 'some-value', 'transient_trait' => (object)['transient' => true, 'value' => 'some-transient-value']];
 
         $streamMock->expects($this->once())
             ->method('createStream')
-            ->with($this->equalTo(json_encode($requestBody)));
+            ->with($this->equalTo(json_encode([
+                'identifier' => $identifier,
+                'traits' => [
+                    ['trait_key' => 'some_trait', 'trait_value' => 'some-value'],
+                    ['trait_key' => 'transient_trait', 'trait_value' => 'some-transient-value', 'transient' => true],
+                ],
+            ])));
 
         $identityFlags = $flagsmith->getIdentityFlags($identifier, $traits)->allFlags();
 
         $this->assertTrue($identityFlags[0]->enabled);
         $this->assertEquals($identityFlags[0]->value, 'some-value');
         $this->assertEquals($identityFlags[0]->feature_name, 'some_feature');
+    }
+
+    public function testGetIdentityFlagsCallsApiWhenNoLocalEnvironmentTransient()
+    {
+        $streamMock = $this->createMock(StreamFactoryInterface::class);
+
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withClient(ClientFixtures::getMockClient())
+            ->withStreamFactory($streamMock);
+
+        $identifier = 'identifer';
+        $traits = (object)['some_trait' => 'some-value'];
+
+        $streamMock->expects($this->once())
+            ->method('createStream')
+            ->with($this->equalTo(json_encode([
+                'identifier' => $identifier,
+                'traits' => [
+                    ['trait_key' => 'some_trait', 'trait_value' => 'some-value'],
+                ],
+                'transient' => true,
+            ])));
+
+        $flagsmith->getIdentityFlags($identifier, $traits, true);
     }
 
     public function testRequestConnectionErrorRaisesFlagsmithApiError()
@@ -293,5 +321,124 @@ class FlagsmithClientTest extends TestCase
             $this->assertEquals($flag->enabled, false);
             $this->assertEquals($flag->value, 'some-overridden-value');
         }
+    }
+
+    public function testOfflineMode()
+    {
+        // Given
+        $offlineHandler = new FakeOfflineHandler();
+        $flagsmith = new Flagsmith(offlineMode: true, offlineHandler: $offlineHandler);
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags('my-identity');
+
+        // Then
+        $this->assertEquals($environmentFlags->getFlag('some_feature')->enabled, true);
+        $this->assertEquals($environmentFlags->getFlag('some_feature')->value, 'some-value');
+
+        $this->assertEquals($identityFlags->getFlag('some_feature')->enabled, true);
+        $this->assertEquals($identityFlags->getFlag('some_feature')->value, 'some-value');
+    }
+
+    public function testFlagsmithUseOfflineHandlerIfSetAndNoApiResponse()
+    {
+        // Given
+        $handlerBuilder = ClientFixtures::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+            ->withMethod('POST')
+            ->withPath('/api/v1/identities/')
+            ->withResponse(new Response(500))
+            ->build()
+        );
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+            ->withMethod('GET')
+            ->withPath('/api/v1/flags/')
+            ->withResponse(new Response(500))
+            ->build()
+        );
+
+        $flagsmith = (new Flagsmith(apiKey: 'some-key', offlineHandler: new FakeOfflineHandler()))
+            ->withClient(ClientFixtures::getMockClient($handlerBuilder, false));
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags('my-identity');
+
+        // Then
+        $this->assertEquals($environmentFlags->getFlag('some_feature')->enabled, true);
+        $this->assertEquals($environmentFlags->getFlag('some_feature')->value, 'some-value');
+
+        $this->assertEquals($identityFlags->getFlag('some_feature')->enabled, true);
+        $this->assertEquals($identityFlags->getFlag('some_feature')->value, 'some-value');
+    }
+
+    public function testCannotUseOfflineModeWithoutOfflineHandler()
+    {
+        // Given
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('offlineHandler must be provided to use offline mode.');
+
+        // When
+        new Flagsmith(offlineMode:true, offlineHandler:null);
+    }
+
+    public function testCannotUseDefaultHandlerAndOfflineHandler()
+    {
+        // Given
+        $defaultFlag = (new DefaultFlag())
+            ->withEnabled(true)
+            ->withValue('some-default-value');
+
+        $defaultFlagHandler = function (string $featureName) use ($defaultFlag) {
+            return $defaultFlag;
+        };
+
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('Cannot use both defaultFlagHandler and offlineHandler.');
+
+        $offlineHandler = new FakeOfflineHandler();
+
+        // When
+        new Flagsmith(defaultFlagHandler:$defaultFlagHandler, offlineHandler:$offlineHandler);
+    }
+
+    public function testCannotCreateFlagsmithClientInRemoteEvaluationWithoutApiKey()
+    {
+        // Given
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('apiKey is required');
+
+        // When
+        new Flagsmith();
+    }
+
+    public function testOfflineHandlerUsedAsFallbackForLocalEvaluation()
+    {
+        // Given
+        $handlerBuilder = ClientFixtures::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+            ->withMethod('GET')
+            ->withPath('/api/v1/environment-document/')
+            ->withResponse(new Response(500))
+            ->build()
+        );
+
+        $offlineHandler = new FakeOfflineHandler();
+        $flagsmith = (new Flagsmith(apiKey: 'ser.some-key', environmentTtl: 3, offlineHandler: $offlineHandler));
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags('my-identity');
+
+        // Then
+        $this->assertEquals($environmentFlags->getFlag('some_feature')->enabled, true);
+        $this->assertEquals($environmentFlags->getFlag('some_feature')->value, 'some-value');
+
+        $this->assertEquals($identityFlags->getFlag('some_feature')->enabled, true);
+        $this->assertEquals($identityFlags->getFlag('some_feature')->value, 'some-value');
     }
 }
