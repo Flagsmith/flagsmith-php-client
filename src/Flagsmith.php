@@ -60,15 +60,15 @@ class Flagsmith
      * @throws ValueError
      */
     public function __construct(
-        string $apiKey = null,
-        string $host = null,
-        object $customHeaders = null,
-        int $environmentTtl = null,
-        Retry $retries = null,
+        ?string $apiKey = null,
+        ?string $host = null,
+        ?object $customHeaders = null,
+        ?int $environmentTtl = null,
+        ?Retry $retries = null,
         bool $enableAnalytics = false,
-        \Closure $defaultFlagHandler = null,
+        ?\Closure $defaultFlagHandler = null,
         bool $offlineMode = false,
-        IOfflineHandler $offlineHandler = null
+        ?IOfflineHandler $offlineHandler = null
     ) {
         if ($offlineMode and is_null($offlineHandler)) {
             throw new ValueError('offlineHandler must be provided to use offline mode.');

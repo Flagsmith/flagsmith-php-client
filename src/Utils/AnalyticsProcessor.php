@@ -31,9 +31,9 @@ class AnalyticsProcessor
         string $environmentKey,
         string $baseApiUrl,
         int $timeout = 5,
-        ClientInterface $client = null,
-        RequestFactoryInterface $requestFactory = null,
-        StreamFactoryInterface $streamFactory = null
+        ?ClientInterface $client = null,
+        ?RequestFactoryInterface $requestFactory = null,
+        ?StreamFactoryInterface $streamFactory = null
     ) {
         $this->analytics_endpoint = rtrim($baseApiUrl, '/') . self::ANALYTICS_ENDPOINT;
         $this->environment_key = $environmentKey;
