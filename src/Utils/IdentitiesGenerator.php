@@ -37,6 +37,6 @@ class IdentitiesGenerator
     {
         $hashedTraits = $traits !== null ? '.'.sha1(serialize($traits)) : '';
         $hashedIdentifier = sha1($identifier);
-        return 'Identity.'.$transient ? 'Transient' : ''.$hashedIdentifier.$hashedTraits;
+        return 'Identity.'.($transient ? 'Transient' : '').$hashedIdentifier.$hashedTraits;
     }
 }
