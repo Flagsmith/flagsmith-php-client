@@ -63,7 +63,7 @@ class Engine
     public static function getIdentityFeatureStates(
         EnvironmentModel $environment,
         IdentityModel $identity,
-        array $overrideTraits = null
+        ?array $overrideTraits = null
     ): array {
         $featureStates = self::_getIdentityFeatureStatesDict(
             $environment,
@@ -96,7 +96,7 @@ class Engine
         EnvironmentModel $environment,
         IdentityModel $identity,
         string $featureName,
-        array $overrideTraits = null
+        ?array $overrideTraits = null
     ): FeatureStateModel {
         $featureStates = self::_getIdentityFeatureStatesDict(
             $environment,
@@ -128,7 +128,7 @@ class Engine
     private static function _getIdentityFeatureStatesDict(
         EnvironmentModel $environment,
         IdentityModel $identity,
-        array $overrideTraits = null
+        ?array $overrideTraits = null
     ): array {
         $featureStates = [];
         foreach ($environment->getFeatureStates() as $fs) {

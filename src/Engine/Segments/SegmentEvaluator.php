@@ -20,7 +20,7 @@ class SegmentEvaluator
     public static function getIdentitySegments(
         EnvironmentModel $environment,
         IdentityModel $identity,
-        array $overrideTraits = null
+        ?array $overrideTraits = null
     ): array {
         return array_filter(
             $environment->getProject()->getSegments()->getArrayCopy(),
@@ -42,7 +42,7 @@ class SegmentEvaluator
     public static function evaluateIdentityInSegment(
         IdentityModel $identity,
         SegmentModel $segment,
-        array $overrideTraits = null
+        ?array $overrideTraits = null
     ): bool {
         $rulesCount = count($segment->getRules());
         $identityId = ($identity->getDjangoId() != null) ? $identity->getDjangoId() : $identity->compositeKey();
