@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Engine\Unit\Utils;
 
@@ -7,7 +9,6 @@ use PHPUnit\Framework\TestCase;
 
 class IdentitiesGeneratorTest extends TestCase
 {
-
     public function testGenerateIdentitiesCacheKey(): void
     {
         $identityId = 'test-identity-id';
