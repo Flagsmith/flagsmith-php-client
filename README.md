@@ -1,5 +1,3 @@
-<img width="100%" src="https://github.com/Flagsmith/flagsmith/raw/main/static-files/hero.png"/>
-
 [![Packagist Version](https://img.shields.io/packagist/v/flagsmith/flagsmith-php-client)](https://packagist.org/packages/flagsmith/flagsmith-php-client)
 [![Packagist Downloads](https://img.shields.io/packagist/dm/flagsmith/flagsmith-php-client)](https://packagist.org/packages/flagsmith/flagsmith-php-client)
 
