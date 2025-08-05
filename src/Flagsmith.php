@@ -146,7 +146,7 @@ class Flagsmith
 
     /**
      * Build with enable Analytics.
-     * @param AnalyticsProcessor $enableAnalytics
+     * @param AnalyticsProcessor $analytics
      * @return Flagsmith
      */
     public function withAnalytics(AnalyticsProcessor $analytics): self
