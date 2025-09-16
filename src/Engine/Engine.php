@@ -7,9 +7,21 @@ use Flagsmith\Engine\Features\FeatureStateModel;
 use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Exceptions\FeatureStateNotFound;
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
+use Flagsmith\Engine\Utils\Types\Result\EvaluationResult;
 
 class Engine
 {
+    /**
+     * Get the evaluation result for a given context.
+     * @param EvaluationContext $context
+     * @return EvaluationResult
+     */
+    public static function getEvaluationResult($context): EvaluationResult
+    {
+        // ...
+    }
+
     /**
      * Get the environment feature states.
      * @param EnvironmentModel $environment
