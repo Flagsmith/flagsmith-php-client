@@ -24,31 +24,4 @@ class FeatureContext
 
     /** @var array<FeatureValue> */
     public $variants;
-
-    /**
-     * @param string $key
-     * @param string $feature_key
-     * @param string $name
-     * @param bool $enabled
-     * @param mixed $value
-     * @param ?array<FeatureValue> $variants
-     * @param ?float $priority
-     */
-    public function __construct(
-        $key,
-        $feature_key,
-        $name,
-        $enabled,
-        $value,
-        $variants,
-        $priority,
-    ) {
-        $this->key = $key;
-        $this->feature_key = $feature_key;
-        $this->name = $name;
-        $this->enabled = $enabled;
-        $this->value = $value;
-        $this->priority = $priority ?? INF;
-        $this->variants = $variants ?? [];
-    }
 }

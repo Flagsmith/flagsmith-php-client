@@ -9,14 +9,4 @@ class FeatureValue
 
     /** @var float */
     public $weight;
-
-    /**
-     * @param mixed $value
-     * @param float $weight
-     */
-    public function __construct($value, $weight)
-    {
-        $this->value = $value;
-        $this->weight = $weight;
-    }
 }

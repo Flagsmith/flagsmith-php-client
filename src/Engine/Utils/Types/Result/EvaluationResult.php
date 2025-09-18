@@ -14,16 +14,4 @@ class EvaluationResult
 
     /** @var array<SegmentResult> */
     public array $segments;
-
-    /**
-     * @param EvaluationContext $context
-     * @param array<FlagResult> $flags
-     * @param array<SegmentResult> $segments
-     */
-    public function __construct($context, $flags, $segments)
-    {
-        $this->context = $context;
-        $this->flags = $flags;
-        $this->segments = $segments;
-    }
 }

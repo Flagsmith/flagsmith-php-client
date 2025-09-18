@@ -9,14 +9,4 @@ class EnvironmentContext
 
     /** @var string */
     public $name;
-
-    /**
-     * @param string $key
-     * @param string $name
-     */
-    public function __construct($key, $name)
-    {
-        $this->key = $key;
-        $this->name = $name;
-    }
 }

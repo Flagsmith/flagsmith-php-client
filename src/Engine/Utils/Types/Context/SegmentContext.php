@@ -15,18 +15,4 @@ class SegmentContext
 
     /** @var array<FeatureContext> */
     public $overrides;
-
-    /**
-     * @param string $key
-     * @param string $name
-     * @param array<SegmentRule> $rules
-     * @param ?array<FeatureContext> $overrides
-     */
-    public function __construct($key, $name, $rules, $overrides)
-    {
-        $this->key = $key;
-        $this->name = $name;
-        $this->rules = $rules;
-        $this->overrides = $overrides ?? [];
-    }
 }

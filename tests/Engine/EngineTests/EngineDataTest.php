@@ -1,28 +1,25 @@
 <?php
+namespace FlagsmithTest\Engine\EngineTests;
 
 use Flagsmith\Engine\Engine;
-use Flagsmith\Engine\Environments\EnvironmentModel;
-use Flagsmith\Engine\Identities\IdentityModel;
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use PHPUnit\Framework\TestCase;
 
 class EngineDataTest extends TestCase
 {
     private int $attempt = 0;
+
+    /** @return array<array<mixed>> */
     public function extractTestCases()
     {
         $fileContents = file_get_contents(__DIR__ . '/EngineTestData/data/environment_n9fbf9h3v4fFgH3U3ngWhb.json');
 
         $contents = json_decode($fileContents);
 
-        $environmentModel = EnvironmentModel::build($contents->environment);
-
         $parameters = [];
-        foreach ($contents->identities_and_responses as $testCase) {
-            $parameters[] = [
-                $environmentModel,
-                IdentityModel::build($testCase->identity),
-                $testCase->response
-            ];
+        foreach ($contents->test_cases as $testCase) {
+            $context = EvaluationContext::fromJsonObject($testCase->context);
+            $parameters[] = [$context, $testCase->response];
         }
 
         return $parameters;
@@ -30,40 +27,16 @@ class EngineDataTest extends TestCase
 
     /**
      * @dataProvider extractTestCases
+     * @param EvaluationContext $evaluationContext
+     * @param object $expectedResult
+     * @return void
      */
-    public function testEngine($environmentModel, $identityModel, $expectedResponse)
+    public function testEngine($evaluationContext, $expectedResult): void
     {
-        $this->attempt++;
-        $engineResponse = Engine::getIdentityFeatureStates($environmentModel, $identityModel);
+        // When
+        $evaluationResult = Engine::getEvaluationResult($evaluationContext);
 
-        usort(
-            $engineResponse,
-            fn ($fs1, $fs2) => $fs1->getFeature()->getName() <=> $fs2->getFeature()->getName()
-        );
-
-        $flags = $expectedResponse->flags;
-        usort(
-            $flags,
-            fn ($fs1, $fs2) => $fs1->feature->name <=> $fs2->feature->name
-        );
-
-        $this->assertEquals(
-            count($flags),
-            count($engineResponse)
-        );
-
-        foreach ($engineResponse as $index => $featureState) {
-            $val = $featureState->getValue($identityModel->getDjangoId());
-            $expectedVal = $flags[$index]->feature_state_value;
-
-            $this->assertEquals(
-                $val,
-                $expectedVal
-            );
-            $this->assertEquals(
-                count($flags),
-                count($engineResponse)
-            );
-        }
+        // Then
+        $this->assertEquals($expectedResult, $evaluationResult);
     }
 }

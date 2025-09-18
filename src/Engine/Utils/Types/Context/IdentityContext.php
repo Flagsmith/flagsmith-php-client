@@ -12,16 +12,4 @@ class IdentityContext
 
     /** @var array<string, mixed> */
     public $traits;
-
-    /**
-     * @param string $key
-     * @param string $identifier
-     * @param ?array<string, mixed> $traits
-     */
-    public function __construct($key, $identifier, $traits)
-    {
-        $this->key = $key;
-        $this->identifier = $identifier;
-        $this->traits = $traits ?? [];
-    }
 }

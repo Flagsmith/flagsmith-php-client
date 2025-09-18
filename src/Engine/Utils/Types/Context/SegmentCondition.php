@@ -12,16 +12,4 @@ class SegmentCondition
 
     /** @var string|array<string>  */
     public $value;
-
-    /**
-     * @param string $property
-     * @param SegmentConditionOperator $operator
-     * @param string|array<string> $value
-     */
-    public function __construct($property, $operator, $value)
-    {
-        $this->property = $property;
-        $this->operator = $operator;
-        $this->value = $value;
-    }
 }
