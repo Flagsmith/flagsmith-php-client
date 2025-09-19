@@ -1,8 +1,10 @@
 <?php
 namespace Flagsmith\Engine\Utils\Types\Context;
 
+use JsonSerializable;
+
 // TODO: Port this to https://wiki.php.net/rfc/dataclass
-class FeatureContext
+class FeatureContext implements JsonSerializable
 {
     /** @var string */
     public $key;
@@ -16,12 +18,34 @@ class FeatureContext
     /** @var bool */
     public $enabled;
 
-    /** @var mixed */
+    /** @var ?mixed */
     public $value;
 
-    /** @var float */
+    /** @var ?float */
     public $priority;
 
     /** @var array<FeatureValue> */
     public $variants;
+
+    /** @return array<string, mixed> */
+    public function jsonSerialize(): array
+    {
+        $json = [
+            'key' => $this->key,
+            'feature_key' => $this->feature_key,
+            'name' => $this->name,
+            'enabled' => $this->enabled,
+            'value' => $this->value,
+        ];
+
+        if ($this->priority !== null) {
+            $json['priority'] = $this->priority;
+        }
+
+        if ($this->variants) {
+            $json['variants'] = $this->variants;
+        }
+
+        return $json;
+    }
 }

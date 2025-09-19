@@ -1,7 +1,7 @@
 <?php
 namespace Flagsmith\Engine\Utils\Types\Context;
 
-enum RuleType: string
+enum SegmentRuleType: string
 {
     case ALL = 'ALL';
     case ANY = 'ANY';

@@ -12,14 +12,16 @@ class EngineDataTest extends TestCase
     /** @return array<array<mixed>> */
     public function extractTestCases()
     {
-        $fileContents = file_get_contents(__DIR__ . '/EngineTestData/data/environment_n9fbf9h3v4fFgH3U3ngWhb.json');
-
-        $contents = json_decode($fileContents);
+        $testDataContent = file_get_contents(
+            __DIR__ .
+                '/EngineTestData/data/environment_n9fbf9h3v4fFgH3U3ngWhb.json',
+        );
+        $testData = json_decode($testDataContent, associative: false);
 
         $parameters = [];
-        foreach ($contents->test_cases as $testCase) {
+        foreach ($testData->test_cases as $testCase) {
             $context = EvaluationContext::fromJsonObject($testCase->context);
-            $parameters[] = [$context, $testCase->response];
+            $parameters[] = [$context, $testCase->result];
         }
 
         return $parameters;
@@ -28,15 +30,26 @@ class EngineDataTest extends TestCase
     /**
      * @dataProvider extractTestCases
      * @param EvaluationContext $evaluationContext
-     * @param object $expectedResult
+     * @param object $expectedEvaluationResult
      * @return void
      */
-    public function testEngine($evaluationContext, $expectedResult): void
-    {
+    public function testEngine(
+        $evaluationContext,
+        $expectedEvaluationResult,
+    ): void {
         // When
         $evaluationResult = Engine::getEvaluationResult($evaluationContext);
 
+        // Hack to allow comparing flags as associative arrays (<feature_name>: <flag>)
+        $wanted = array_column($expectedEvaluationResult->flags, null, 'name');
+        $expectedEvaluationResult->flags = $wanted;
+        $actual = array_column($evaluationResult->flags, null, 'name');
+        $evaluationResult->flags = $actual;
+
         // Then
-        $this->assertEquals($expectedResult, $evaluationResult);
+        $this->assertEquals(
+            json_decode(json_encode($expectedEvaluationResult), true),
+            json_decode(json_encode($evaluationResult), true),
+        );
     }
 }

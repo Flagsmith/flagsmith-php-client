@@ -7,19 +7,368 @@ use Flagsmith\Engine\Features\FeatureStateModel;
 use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Exceptions\FeatureStateNotFound;
+use Flagsmith\Engine\Utils\Hashing;
+use Flagsmith\Engine\Utils\Semver;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
+use Flagsmith\Engine\Utils\Types\Context\FeatureContext;
+use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
+use Flagsmith\Engine\Utils\Types\Context\SegmentCondition;
+use Flagsmith\Engine\Utils\Types\Context\SegmentConditionOperator;
+use Flagsmith\Engine\Utils\Types\Context\SegmentContext;
+use Flagsmith\Engine\Utils\Types\Context\SegmentRule;
 use Flagsmith\Engine\Utils\Types\Result\EvaluationResult;
+use Flagsmith\Engine\Utils\Types\Result\FlagResult;
+use Flagsmith\Engine\Utils\Types\Result\SegmentResult;
+use Flow\JSONPath\JSONPath;
+use Flow\JSONPath\JSONPathException;
 
 class Engine
 {
     /**
      * Get the evaluation result for a given context.
-     * @param EvaluationContext $context
-     * @return EvaluationResult
+     *
+     * @param EvaluationContext $context The evaluation context.
+     * @return EvaluationResult EvaluationResult containing the context, flags, and segments
      */
     public static function getEvaluationResult($context): EvaluationResult
     {
-        // ...
+        /** @var array<string, SegmentResult> */
+        $evaluatedSegments = [];
+
+        /** @var array<string, FeatureContext> */
+        $evaluatedFeatures = [];
+
+        /** @var array<string, SegmentContext> */
+        $matchedSegmentsByFeatureKey = [];
+
+        /** @var array<FlagResult> */
+        $evaluatedFlags = [];
+
+        foreach ($context->segments as $segment) {
+            if (!self::isContextInSegment($context, $segment)) {
+                continue;
+            }
+
+            $segmentResult = new SegmentResult();
+            $segmentResult->key = $segment->key;
+            $segmentResult->name = $segment->name;
+            $evaluatedSegments[] = $segmentResult;
+
+            if (empty($segment->overrides)) {
+                continue;
+            }
+
+            foreach ($segment->overrides as $overrideFeature) {
+                $featureKey = $overrideFeature->feature_key;
+                $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
+                if ($evaluatedFeature) {
+                    $overrideWinsPriority =
+                        ($overrideFeature->priority ?? INF) <
+                        ($evaluatedFeature->priority ?? INF);
+                    if (!$overrideWinsPriority) {
+                        continue;
+                    }
+                }
+
+                $evaluatedFeatures[$featureKey] = $overrideFeature;
+                $matchedSegmentsByFeatureKey[$featureKey] = $segment;
+            }
+        }
+
+        foreach ($context->features as $feature) {
+            $featureKey = $feature->feature_key;
+            $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
+            if ($evaluatedFeature) {
+                $evaluatedFlags[] = self::getFlagResultFromSegmentContext(
+                    $evaluatedFeature,
+                    $matchedSegmentsByFeatureKey[$featureKey],
+                );
+                continue;
+            }
+
+            $evaluatedFlags[] = self::getFlagResultFromFeatureContext(
+                $feature,
+                $context->identity?->key,
+            );
+        }
+
+        $result = new EvaluationResult();
+        $result->context = $context;
+        $result->flags = $evaluatedFlags;
+        $result->segments = $evaluatedSegments;
+        return $result;
+    }
+
+    /**
+     * @param EvaluationContext $context
+     * @param SegmentContext $segment
+     * @return bool
+     */
+    private static function isContextInSegment($context, $segment): bool
+    {
+        if (empty($segment->rules)) {
+            return false;
+        }
+
+        foreach ($segment->rules as $rule) {
+            if (!self::_contextMatchesRule($context, $rule, $segment->key)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param FeatureContext $feature
+     * @param ?string $splitKey
+     * @return FlagResult
+     */
+    private static function getFlagResultFromFeatureContext($feature, $splitKey)
+    {
+        if ($splitKey !== null && !empty($feature->variants)) {
+            $percentageValue = new Hashing()->getHashedPercentageForObjectIds([
+                $feature->key,
+                $splitKey,
+            ]);
+
+            $startPercentage = 0.0;
+            foreach ($feature->variants as $variant) {
+                $limit = $variant->weight + $startPercentage;
+                if (
+                    $startPercentage <= $percentageValue &&
+                    $percentageValue < $limit
+                ) {
+                    $flag = new FlagResult();
+                    $flag->feature_key = $feature->feature_key;
+                    $flag->name = $feature->name;
+                    $flag->enabled = $feature->enabled;
+                    $flag->value = $variant->value;
+                    $flag->reason = "SPLIT; weight={$variant->weight}";
+                    return $flag;
+                }
+                $startPercentage = $limit;
+            }
+        }
+
+        $flag = new FlagResult();
+        $flag->feature_key = $feature->feature_key;
+        $flag->name = $feature->name;
+        $flag->enabled = $feature->enabled;
+        $flag->value = $feature->value;
+        $flag->reason = 'DEFAULT';
+        return $flag;
+    }
+
+    /**
+     * @param FeatureContext $feature
+     * @param SegmentContext $segment
+     * @return FlagResult
+     */
+    private static function getFlagResultFromSegmentContext($feature, $segment)
+    {
+        $flag = new FlagResult();
+        $flag->feature_key = $feature->feature_key;
+        $flag->name = $feature->name;
+        $flag->enabled = $feature->enabled;
+        $flag->value = $feature->value;
+        $flag->reason = "TARGETING_MATCH; segment={$segment->name}";
+        return $flag;
+    }
+
+    /**
+     * @param EvaluationContext $context
+     * @param SegmentRule $rule
+     * @param string $segmentKey
+     * @return bool
+     */
+    private static function _contextMatchesRule(
+        $context,
+        $rule,
+        $segmentKey,
+    ): bool {
+        $any = false;
+        foreach ($rule->conditions as $condition) {
+            $conditionMatches = self::_contextMatchesCondition(
+                $context,
+                $condition,
+                $segmentKey,
+            );
+
+            switch ($rule->type) {
+                case SegmentRuleType::ALL:
+                    if (!$conditionMatches) {
+                        return false;
+                    }
+                    break;
+                case SegmentRuleType::NONE:
+                    if ($conditionMatches) {
+                        return false;
+                    }
+                    break;
+                case SegmentRuleType::ANY:
+                    if ($conditionMatches) {
+                        $any = true;
+                        break 2;
+                    }
+                    break;
+            }
+        }
+
+        if ($rule->type === SegmentRuleType::ANY && !$any) {
+            return false;
+        }
+
+        foreach ($rule->rules as $subRule) {
+            $ruleMatches = self::_contextMatchesRule(
+                $context,
+                $subRule,
+                $segmentKey,
+            );
+            if (!$ruleMatches) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param EvaluationContext $context
+     * @param SegmentCondition $condition
+     * @param string $segmentKey
+     * @return bool
+     */
+    private static function _contextMatchesCondition(
+        $context,
+        $condition,
+        $segmentKey,
+    ): bool {
+        $contextValue = self::_getContextValue($context, $condition->property);
+
+        switch ($condition->operator) {
+            case SegmentConditionOperator::IN:
+                /** @var array<mixed> $inValues */
+                if (is_array($contextValue)) {
+                    $inValues = $condition->value;
+                } else {
+                    $inValues = json_decode($condition->value, true);
+                    $jsonDecodingFailed = $inValues === null;
+                    if ($jsonDecodingFailed || !is_array($inValues)) {
+                        $inValues = explode(',', $condition->value);
+                    }
+                }
+                return in_array($contextValue, $inValues, strict: true);
+
+            case SegmentConditionOperator::PERCENTAGE_SPLIT:
+                if (!is_numeric($condition->value)) {
+                    return false;
+                }
+
+                /** @var array<string> $objectIds */
+                if ($contextValue !== null) {
+                    $objectIds = [$segmentKey, $contextValue];
+                } elseif ($context->identity !== null) {
+                    $objectIds = [$segmentKey, $context->identity->key];
+                } else {
+                    return false;
+                }
+
+                $threshold = new Hashing()->getHashedPercentageForObjectIds(
+                    $objectIds,
+                );
+                return $threshold <= floatval($condition->value);
+
+            case SegmentConditionOperator::MODULO:
+                if (!is_numeric($contextValue)) {
+                    return false;
+                }
+
+                [$divisor, $remainder] = explode('|', $condition->value);
+                if (!is_numeric($divisor) || !is_numeric($remainder)) {
+                    return false;
+                }
+
+                return floatval($contextValue) % $divisor === $remainder;
+
+            case SegmentConditionOperator::IS_NOT_SET:
+                return $contextValue === null;
+
+            case SegmentConditionOperator::IS_SET:
+                return $contextValue !== null;
+
+            case SegmentConditionOperator::CONTAINS:
+                return str_contains($contextValue, $condition->value);
+
+            case SegmentConditionOperator::NOT_CONTAINS:
+                return !str_contains($contextValue, $condition->value);
+
+            case SegmentConditionOperator::REGEX:
+                return boolval(
+                    preg_match("/{$condition->value}/", $contextValue),
+                );
+        }
+
+        if ($contextValue === null) {
+            return false;
+        }
+
+        $operator = match ($condition->operator) {
+            SegmentConditionOperator::EQUAL => '==',
+            SegmentConditionOperator::NOT_EQUAL => '!=',
+            SegmentConditionOperator::GREATER_THAN => '>',
+            SegmentConditionOperator::GREATER_THAN_INCLUSIVE => '>=',
+            SegmentConditionOperator::LESS_THAN => '<',
+            SegmentConditionOperator::LESS_THAN_INCLUSIVE => '<=',
+            default => null,
+        };
+
+        if (is_string($contextValue) && Semver::isSemver($contextValue)) {
+            $contextValue = Semver::removeSemverSuffix($contextValue);
+            return $operator !== null &&
+                version_compare($contextValue, $condition->value, $operator);
+        }
+
+        return match ($operator) {
+            '==' => $contextValue == $condition->value,
+            '!=' => $contextValue != $condition->value,
+            '>' => $contextValue > $condition->value,
+            '>=' => $contextValue >= $condition->value,
+            '<' => $contextValue < $condition->value,
+            '<=' => $contextValue <= $condition->value,
+            default => false,
+        };
+    }
+
+    /**
+     * @param EvaluationContext $context
+     * @param string $property
+     * @return mixed|array<mixed>|null
+     */
+    private static function _getContextValue($context, $property)
+    {
+        if (str_starts_with($property, '$.')) {
+            try {
+                $results = new JSONPath($context)->find($property)->getData();
+            } catch (JSONPathException) {
+                // The unlikely case when a trait starts with "$." but isn't JSONPath
+                $escapedProperty = addslashes($property);
+                $path = "$.identity.traits['{$escapedProperty}']";
+                $results = new JSONPath()->find($path)->getData();
+            }
+
+            return match (count($results)) {
+                0 => null,
+                1 => $results[0],
+                default => $results,
+            };
+        }
+
+        if ($context->identity !== null) {
+            return $context->identity->traits->{$property} ?? null;
+        }
+
+        return null;
     }
 
     /**
