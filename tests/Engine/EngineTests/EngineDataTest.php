@@ -1,4 +1,5 @@
 <?php
+
 namespace FlagsmithTest\Engine\EngineTests;
 
 use Flagsmith\Engine\Engine;

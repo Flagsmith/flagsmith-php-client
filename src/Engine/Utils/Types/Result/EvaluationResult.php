@@ -1,4 +1,5 @@
 <?php
+
 namespace Flagsmith\Engine\Utils\Types\Result;
 
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;

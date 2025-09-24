@@ -127,7 +127,8 @@ class Engine
     private static function getFlagResultFromFeatureContext($feature, $splitKey)
     {
         if ($splitKey !== null && !empty($feature->variants)) {
-            $percentageValue = new Hashing()->getHashedPercentageForObjectIds([
+            $hashing = new Hashing();
+            $percentageValue = $hashing->getHashedPercentageForObjectIds([
                 $feature->key,
                 $splitKey,
             ]);
@@ -274,7 +275,8 @@ class Engine
                     return false;
                 }
 
-                $threshold = new Hashing()->getHashedPercentageForObjectIds(
+                $hashing = new Hashing();
+                $threshold = $hashing->getHashedPercentageForObjectIds(
                     $objectIds,
                 );
                 return $threshold <= floatval($condition->value);
@@ -349,12 +351,14 @@ class Engine
     {
         if (str_starts_with($property, '$.')) {
             try {
-                $results = new JSONPath($context)->find($property)->getData();
+                $json = new JSONPath($context);
+                $results = $json->find($property)->getData();
             } catch (JSONPathException) {
                 // The unlikely case when a trait starts with "$." but isn't JSONPath
                 $escapedProperty = addslashes($property);
                 $path = "$.identity.traits['{$escapedProperty}']";
-                $results = new JSONPath()->find($path)->getData();
+                $json = new JSONPath($context);
+                $results = $json->find($path)->getData();
             }
 
             return match (count($results)) {
