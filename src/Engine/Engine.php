@@ -24,6 +24,9 @@ use Flow\JSONPath\JSONPathException;
 
 class Engine
 {
+    private const STRONGEST_PRIORITY = -INF;
+    private const WEAKEST_PRIORITY = +INF;
+
     /**
      * Get the evaluation result for a given context.
      *
@@ -63,8 +66,8 @@ class Engine
                 $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
                 if ($evaluatedFeature) {
                     $overrideWinsPriority =
-                        ($overrideFeature->priority ?? INF) <
-                        ($evaluatedFeature->priority ?? INF);
+                        ($overrideFeature->priority ?? self::WEAKEST_PRIORITY) <
+                        ($evaluatedFeature->priority ?? self::WEAKEST_PRIORITY);
                     if (!$overrideWinsPriority) {
                         continue;
                     }
