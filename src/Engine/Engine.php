@@ -44,7 +44,7 @@ class Engine
         /** @var array<string, SegmentContext> */
         $matchedSegmentsByFeatureKey = [];
 
-        /** @var array<FlagResult> */
+        /** @var array<string, FlagResult> */
         $evaluatedFlags = [];
 
         foreach ($context->segments as $segment) {
@@ -80,23 +80,23 @@ class Engine
 
         foreach ($context->features as $feature) {
             $featureKey = $feature->feature_key;
+            $featureName = $feature->name;
             $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
             if ($evaluatedFeature) {
-                $evaluatedFlags[] = self::getFlagResultFromSegmentContext(
+                $evaluatedFlags[$featureName] = self::getFlagResultFromSegmentContext(
                     $evaluatedFeature,
                     $matchedSegmentsByFeatureKey[$featureKey],
                 );
                 continue;
             }
 
-            $evaluatedFlags[] = self::getFlagResultFromFeatureContext(
+            $evaluatedFlags[$featureName] = self::getFlagResultFromFeatureContext(
                 $feature,
                 $context->identity?->key,
             );
         }
 
         $result = new EvaluationResult();
-        $result->context = $context;
         $result->flags = $evaluatedFlags;
         $result->segments = $evaluatedSegments;
         return $result;

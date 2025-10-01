@@ -41,12 +41,6 @@ class EngineDataTest extends TestCase
         // When
         $evaluationResult = Engine::getEvaluationResult($evaluationContext);
 
-        // Hack to allow comparing flags as associative arrays (<feature_name>: <flag>)
-        $wanted = array_column($expectedEvaluationResult->flags, null, 'name');
-        $expectedEvaluationResult->flags = $wanted;
-        $actual = array_column($evaluationResult->flags, null, 'name');
-        $evaluationResult->flags = $actual;
-
         // Then
         $this->assertEquals(
             json_decode(json_encode($expectedEvaluationResult), true),
