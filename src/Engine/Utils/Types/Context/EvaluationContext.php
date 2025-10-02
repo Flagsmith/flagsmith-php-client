@@ -56,6 +56,15 @@ class EvaluationContext
     }
 
     /**
+     * Deep clone the EvaluationContext
+     * @return EvaluationContext
+     */
+    public function deepClone(): self
+    {
+        return EvaluationContext::fromJsonObject($this);
+    }
+
+    /**
      * @param array<object> $jsonRules
      * @return array<SegmentRule>
      */

@@ -3,6 +3,7 @@
 namespace Flagsmith\Models;
 
 use Flagsmith\Concerns\HasWith;
+use Flagsmith\Engine\Utils\Types\Result\EvaluationResult;
 use Flagsmith\Utils\Collections\FlagModelsList;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Exceptions\FlagsmithClientError;
@@ -77,6 +78,35 @@ class Flags
     public function withAnalyticsProcessor(?AnalyticsProcessor $analyticsProcessor): self
     {
         return $this->with('analytics_processor', $analyticsProcessor);
+    }
+
+    /**
+     * Build Flags from Evaluation Result.
+     * @param EvaluationResult $evaluationResult
+     * @param ?AnalyticsProcessor $analyticsProcessor
+     * @param ?\Closure $defaultFlagHandler
+     * @return void
+     */
+    public static function fromEvaluationResult(
+        $evaluationResult,
+        ?AnalyticsProcessor $analyticsProcessor,
+        ?\Closure $defaultFlagHandler,
+    ): Flags {
+        $flags = [];
+        foreach ($evaluationResult->flags as $flagResult) {
+            $flag = new Flag();
+            $flag->feature_name = $flagResult->name;
+            $flag->feature_id = (int) $flagResult->feature_key;
+            $flag->enabled = $flagResult->enabled;
+            $flag->value = $flagResult->value;
+            $flags[$flagResult->name] = $flag;
+        }
+
+        $_this = new self();
+        $_this->flags = new FlagModelsList($flags);
+        $_this->default_flag_handler = $defaultFlagHandler;
+        $_this->analytics_processor = $analyticsProcessor;
+        return $_this;
     }
 
     /**

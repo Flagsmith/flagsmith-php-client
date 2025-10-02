@@ -10,6 +10,8 @@ use Flagsmith\Engine\Identities\Traits\TraitModel;
 use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
+use Flagsmith\Engine\Utils\Mappers\Mappers;
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Exceptions\FlagsmithThrowable;
@@ -53,6 +55,7 @@ class Flagsmith
     private bool $useCacheAsFailover = false;
     private array $headers = [];
     private ?EnvironmentModel $environment = null;
+    private ?EvaluationContext $localEvaluationContext = null;
     private bool $offlineMode = false;
     private ?IOfflineHandler $offlineHandler = null;
 
@@ -311,7 +314,7 @@ class Flagsmith
      */
     public function getEnvironmentFlags(): Flags
     {
-        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->environment) {
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->localEvaluationContext) {
             return $this->getEnvironmentFlagsFromDocument();
         }
 
@@ -337,7 +340,7 @@ class Flagsmith
     public function getIdentityFlags(string $identifier, ?object $traits = null, ?bool $transient = false): Flags
     {
         $traits = $traits ?? (object)[];
-        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->environment) {
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->localEvaluationContext) {
             return $this->getIdentityFlagsFromDocument($identifier, $traits);
         }
 
@@ -350,23 +353,33 @@ class Flagsmith
      *      environment , e.g. email address, username, uuid
      * @param object|null $traits a dictionary of traits to add / update on the identity in
      *      Flagsmith, e.g. {"num_orders": 10}
-     * @return array
+     * @return array<Segment>
      *
      * @throws FlagsmithThrowable
      */
     public function getIdentitySegments(string $identifier, ?object $traits = null): array
     {
-        if (empty($this->environment)) {
-            throw new FlagsmithClientError('Local evaluation required to obtain identity segments.');
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('No evaluation context present.');
         }
 
-        $traits = $traits ?? (object)[];
-        $identityModel = $this->getIdentityModel($identifier, $traits);
-        $segmentModels = SegmentEvaluator::getIdentitySegments($this->environment, $identityModel);
+        $context = Mappers::mapContextAndIdentityToContext(
+            context: $this->localEvaluationContext,
+            identifier: $identifier,
+            traits: $traits,
+        );
 
-        return array_map(fn ($segment) => (new Segment())
-            ->withId($segment->getId())
-            ->withName($segment->getName()), $segmentModels);
+        $evaluationResult = Engine::getEvaluationResult($context);
+
+        $segments = [];
+        foreach ($evaluationResult->segments as $resultSegment) {
+            $segment = new Segment();
+            $segment->id = (int) $resultSegment->key;
+            $segment->name = $resultSegment->name;
+            $segments[] = $segment;
+        }
+
+        return $segments;
     }
 
     /**
@@ -401,10 +414,16 @@ class Flagsmith
      */
     private function getEnvironmentFlagsFromDocument(): Flags
     {
-        return Flags::fromFeatureStateModels(
-            new FeatureStateModelList(Engine::getEnvironmentFeatureStates($this->environment)),
-            $this->analyticsProcessor,
-            $this->defaultFlagHandler
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('No evaluation context present.');
+        }
+
+        $evaluationResult = Engine::getEvaluationResult($this->localEvaluationContext);
+
+        return Flags::fromEvaluationResult(
+            $evaluationResult,
+            analyticsProcessor: $this->analyticsProcessor,
+            defaultFlagHandler: $this->defaultFlagHandler,
         );
     }
 
@@ -418,14 +437,22 @@ class Flagsmith
      */
     private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
     {
-        $identityModel = $this->getIdentityModel($identifier, $traits);
-        $featureStates = Engine::getIdentityFeatureStates($this->environment, $identityModel);
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('No evaluation context present.');
+        }
 
-        return Flags::fromFeatureStateModels(
-            new FeatureStateModelList($featureStates),
-            $this->analyticsProcessor,
-            $this->defaultFlagHandler,
-            $identityModel->compositeKey(),
+        $context = Mappers::mapContextAndIdentityToContext(
+            context: $this->localEvaluationContext,
+            identifier: $identifier,
+            traits: $traits,
+        );
+
+        $evaluationResult = Engine::getEvaluationResult($context);
+
+        return Flags::fromEvaluationResult(
+            $evaluationResult,
+            analyticsProcessor: $this->analyticsProcessor,
+            defaultFlagHandler: $this->defaultFlagHandler,
         );
     }
 

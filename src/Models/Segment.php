@@ -8,8 +8,8 @@ class Segment
 {
     use HasWith;
 
-    private int $id;
-    private string $name;
+    public int $id;
+    public string $name;
 
     /**
      * Get the ID.
