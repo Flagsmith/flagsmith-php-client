@@ -372,7 +372,7 @@ class Engine
         }
 
         if ($context->identity !== null) {
-            return $context->identity->traits->{$property} ?? null;
+            return $context->identity->traits[$property] ?? null;
         }
 
         return null;

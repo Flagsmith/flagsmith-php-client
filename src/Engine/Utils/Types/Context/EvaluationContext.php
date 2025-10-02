@@ -32,7 +32,7 @@ class EvaluationContext
         $context->identity = new IdentityContext();
         $context->identity->key = $jsonContext->identity->key;
         $context->identity->identifier = $jsonContext->identity->identifier;
-        $context->identity->traits = $jsonContext->identity->traits;
+        $context->identity->traits = (array) ($jsonContext->identity->traits ?? []);
 
         $context->segments = [];
         foreach ($jsonContext->segments as $jsonSegment) {
