@@ -1,4 +1,4 @@
 [submodule "tests/Engine/EngineTests/EngineTestData"]
 	path = tests/Engine/EngineTests/EngineTestData
 	url = git@github.com:Flagsmith/engine-test-data.git
-	branch = feat/context-values-intensifies
+	branch = feat/context-values
