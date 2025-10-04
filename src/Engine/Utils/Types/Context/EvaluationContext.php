@@ -29,10 +29,12 @@ class EvaluationContext
         $context->environment->key = $jsonContext->environment->key;
         $context->environment->name = $jsonContext->environment->name;
 
-        $context->identity = new IdentityContext();
-        $context->identity->key = $jsonContext->identity->key;
-        $context->identity->identifier = $jsonContext->identity->identifier;
-        $context->identity->traits = (array) ($jsonContext->identity->traits ?? []);
+        if (!empty($jsonContext->identity)) {
+            $context->identity = new IdentityContext();
+            $context->identity->key = $jsonContext->identity->key;
+            $context->identity->identifier = $jsonContext->identity->identifier;
+            $context->identity->traits = (array) ($jsonContext->identity->traits ?? []);
+        }
 
         $context->segments = [];
         foreach ($jsonContext->segments as $jsonSegment) {
