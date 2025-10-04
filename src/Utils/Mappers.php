@@ -1,6 +1,6 @@
 <?php
 
-namespace Flagsmith\Engine\Utils\Mappers;
+namespace Flagsmith\Utils;
 
 use Flagsmith\Engine\Engine;
 use Flagsmith\Engine\Utils\Types\Context\EnvironmentContext;
