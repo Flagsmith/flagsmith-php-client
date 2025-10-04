@@ -54,7 +54,6 @@ class Flagsmith
     private bool $skipCache = false;
     private bool $useCacheAsFailover = false;
     private array $headers = [];
-    private ?EnvironmentModel $environment = null;
     private ?EvaluationContext $localEvaluationContext = null;
     private bool $offlineMode = false;
     private ?IOfflineHandler $offlineHandler = null;
@@ -81,7 +80,9 @@ class Flagsmith
             throw new ValueError('Cannot use both defaultFlagHandler and offlineHandler.');
         }
 
-        if (is_int($environmentTtl)) {
+        $enableLocalEvaluation = $environmentTtl != null && $environmentTtl > 0;
+
+        if ($enableLocalEvaluation) {
             if (stripos($apiKey, 'ser.') === false) {
                 throw new ValueError(
                     'In order to use local evaluation, please generate a server key in the environment settings page.'
@@ -91,6 +92,7 @@ class Flagsmith
 
         $this->offlineMode = $offlineMode;
         $this->offlineHandler = $offlineHandler;
+        $this->enableLocalEvaluation = $enableLocalEvaluation;
 
         if (!is_null($offlineHandler)) {
             $this->environment = $offlineHandler->getEnvironment();
@@ -105,7 +107,6 @@ class Flagsmith
             $this->host = !is_null($host) ? rtrim($host, '/') : self::DEFAULT_API_URL;
             $this->customHeaders = $customHeaders ?? $this->customHeaders;
             $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
-            $this->enableLocalEvaluation = !is_null($environmentTtl);
             $this->retries = $retries ?? new Retry(3);
             $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
             $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
@@ -390,22 +391,19 @@ class Flagsmith
      */
     public function updateEnvironment()
     {
-        if (is_int($this->environmentTtl)) {
-            $this->environment = $this->getEnvironmentFromApi();
+        if (!$this->enableLocalEvaluation) {
+            return;
         }
-    }
 
-    /**
-     * Get the environment API.
-     * @return EnvironmentModel
-     *
-     * @throws FlagsmithAPIError
-     */
-    private function getEnvironmentFromApi(): EnvironmentModel
-    {
-        $environmentDict = $this->cachedCall('Environment', 'GET', $this->environment_url, [], false, $this->environmentTtl);
+        $environmentData = $this->cachedCall(
+            cacheKey: 'Environment',
+            method: 'GET',
+            uri: $this->environment_url,
+            ttl: $this->environmentTtl,
+        );
 
-        return EnvironmentModel::build($environmentDict);
+        $context = Mappers::mapEnvironmentDocumentToContext($environmentData);
+        $this->localEvaluationContext = $context;
     }
 
     /**
