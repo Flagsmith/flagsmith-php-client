@@ -29,10 +29,12 @@ class EvaluationContext
         $context->environment->key = $jsonContext->environment->key;
         $context->environment->name = $jsonContext->environment->name;
 
-        $context->identity = new IdentityContext();
-        $context->identity->key = $jsonContext->identity->key;
-        $context->identity->identifier = $jsonContext->identity->identifier;
-        $context->identity->traits = (array) ($jsonContext->identity->traits ?? []);
+        if (!empty($jsonContext->identity)) {
+            $context->identity = new IdentityContext();
+            $context->identity->key = $jsonContext->identity->key;
+            $context->identity->identifier = $jsonContext->identity->identifier;
+            $context->identity->traits = (array) ($jsonContext->identity->traits ?? []);
+        }
 
         $context->segments = [];
         foreach ($jsonContext->segments as $jsonSegment) {
@@ -40,17 +42,11 @@ class EvaluationContext
             $segment->key = $jsonSegment->key;
             $segment->name = $jsonSegment->name;
             $segment->rules = self::_convertRules($jsonSegment->rules ?? []);
-            $segment->overrides = self::_convertFeatures(
-                $jsonSegment->overrides ?? [],
-                associative: false,
-            );
+            $segment->overrides = array_values(self::_convertFeatures($jsonSegment->overrides ?? []));
             $context->segments[$segment->key] = $segment;
         }
 
-        $context->features = self::_convertFeatures(
-            $jsonContext->features ?? [],
-            associative: true,
-        );
+        $context->features = self::_convertFeatures($jsonContext->features ?? []);
 
         return $context;
     }
@@ -98,10 +94,9 @@ class EvaluationContext
 
     /**
      * @param array<object> $jsonFeatures
-     * @param bool $associative
-     * @return array<FeatureContext>
+     * @return array<string, FeatureContext>
      */
-    private static function _convertFeatures($jsonFeatures, $associative): array
+    private static function _convertFeatures($jsonFeatures): array
     {
         $features = [];
         foreach ($jsonFeatures as $jsonFeature) {
@@ -120,11 +115,7 @@ class EvaluationContext
                 $feature->variants[] = $variant;
             }
 
-            if ($associative) {
-                $features[$jsonFeature->name] = $feature;
-            } else {
-                $features[] = $feature;
-            }
+            $features[$jsonFeature->name] = $feature;
         }
 
         return $features;
