@@ -124,7 +124,7 @@ class Mappers
 
             $featureContexts[$feature->name] = $feature;
         }
-        
+
         return $featureContexts;
     }
 
@@ -159,13 +159,13 @@ class Mappers
 
         /** @var array<string, SegmentContext> */
         $segments = [];
-        foreach ($featuresToIdentifiers as $serializedoverridesKey => $identifiers) {
+        foreach ($featuresToIdentifiers as $serializedOverridesKey => $identifiers) {
             $segment = new SegmentContext();
-            $segment->key = hash('sha256', $overridesKey); 
-            $segment->name = "identity_overrides";
+            $segment->key = hash('sha256', $serializedOverridesKey);
+            $segment->name = 'identity_overrides';
 
             $identifiersCondition = new SegmentCondition();
-            $identifiersCondition->property = "$.identity.identifier";
+            $identifiersCondition->property = '$.identity.identifier';
             $identifiersCondition->operator = SegmentConditionOperator::IN;
             $identifiersCondition->value = $identifiers;
 
@@ -175,10 +175,10 @@ class Mappers
             $segment->rules = [$identifiersRule];
 
             $segment->overrides = [];
-            foreach (unserialize($overridesKey) as $overideKey) {
-                [$featureKey, $featureName, $enabled, $value] = $overideKey;
+            foreach (unserialize($serializedOverridesKey) as $overrideKey) {
+                [$featureKey, $featureName, $enabled, $value] = $overrideKey;
                 $feature = new FeatureContext();
-                $feature->key = "--irrelevant--";
+                $feature->key = '--irrelevant--';
                 $feature->feature_key = $featureKey;
                 $feature->name = $featureName;
                 $feature->enabled = $enabled;

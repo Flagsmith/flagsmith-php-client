@@ -7,8 +7,6 @@ use Flagsmith\Engine\Engine;
 use Flagsmith\Engine\Environments\EnvironmentModel;
 use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Identities\Traits\TraitModel;
-use Flagsmith\Engine\Segments\SegmentEvaluator;
-use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
@@ -389,7 +387,7 @@ class Flagsmith
      *
      * @throws FlagsmithThrowable
      */
-    public function updateEnvironment()
+    public function updateEnvironment(): void
     {
         if (!$this->enableLocalEvaluation) {
             return;
