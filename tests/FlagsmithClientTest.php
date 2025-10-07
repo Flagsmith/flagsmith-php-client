@@ -1,6 +1,8 @@
 <?php
 
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
+use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
 use FlagsmithTest\ClientFixtures;
@@ -11,6 +13,102 @@ use Psr\Http\Message\StreamFactoryInterface;
 
 class FlagsmithClientTest extends TestCase
 {
+    /** @return \Generator<array<string, mixed>> */
+    public function data__test_isLocalEvaluationEnabled__given_ttl__returns_accordingly(): \Generator
+    {
+        $ttlCases = [
+            ['ttl' => null, 'expected' => false],
+            ['ttl' => 0, 'expected' => false],
+            ['ttl' => 5, 'expected' => true],
+            ['ttl' => 10, 'expected' => true],
+            ['ttl' => -1, 'expected' => false],
+        ];
+
+        $initCases = [
+            ['init' => fn ($ttl) => new Flagsmith('api_key', environmentTtl: $ttl)],
+            ['init' => fn ($ttl) => new Flagsmith('api_key')->withEnvironmentTtl($ttl)],
+        ];
+
+        foreach ($initCases as $initCase) {
+            foreach ($ttlCases as $ttlCase) {
+                yield [array_merge($initCase, $ttlCase)];
+            }
+        }
+    }
+
+    /**
+     * @dataProvider data__test_isLocalEvaluationEnabled__given_ttl__returns_accordingly
+     * @param array<string, mixed> $case
+     */
+    public function test_isLocalEvaluationEnabled__given_ttl__returns_accordingly($case): void
+    {
+        // Given
+        $flagsmith = $case['init']($case['ttl']);
+
+        // When
+        $this->assertEquals($case['expected'], $flagsmith->isLocalEvaluationEnabled());
+    }
+
+    /** @return array<array<bool>> */
+    public function data__test_isLocalEvaluationReady__checks_local_evaluation_state(): array
+    {
+        return [
+            [['expected' => true]],
+            [['expected' => false]],
+        ];
+    }
+
+    /**
+     * @dataProvider data__test_isLocalEvaluationReady__checks_local_evaluation_state
+     * @param array<string, mixed> $case
+     */
+    public function test_isLocalEvaluationReady__checks_local_evaluation_state($case): void
+    {
+        // Given
+        $flagsmith = $this->getMockBuilder(Flagsmith::class)
+            ->setConstructorArgs(['ser.api_key'])
+            ->onlyMethods(['getLocalEvaluationContext', 'isLocalEvaluationEnabled'])
+            ->getMock();
+        $flagsmith->method('isLocalEvaluationEnabled')->willReturn($case['expected']);
+        $flagsmith->method('getLocalEvaluationContext')->willReturn(new EvaluationContext());
+
+        // When
+        $result = $flagsmith->isLocalEvaluationReady();
+
+        // Then
+        $this->assertEquals($case['expected'], $result);
+    }
+
+    public function test_isLocalEvaluationReady__throws_if_not_server_key(): void
+    {
+        // Given
+        $flagsmith = $this->getMockBuilder(Flagsmith::class)
+            ->setConstructorArgs(['api_key'])
+            ->onlyMethods(['getLocalEvaluationContext', 'isLocalEvaluationEnabled'])
+            ->getMock();
+        $flagsmith->method('isLocalEvaluationEnabled')->willReturn(true);
+        $flagsmith->method('getLocalEvaluationContext')->willReturn(new EvaluationContext());
+
+        // When & Then
+        $this->expectException(\ValueError::class);
+        $flagsmith->isLocalEvaluationReady();
+    }
+
+    public function test_isLocalEvaluationReady__throws_if_no_evaluation_context_set(): void
+    {
+        // Given
+        $flagsmith = $this->getMockBuilder(Flagsmith::class)
+            ->setConstructorArgs(['ser.api_key'])
+            ->onlyMethods(['getLocalEvaluationContext', 'isLocalEvaluationEnabled'])
+            ->getMock();
+        $flagsmith->method('isLocalEvaluationEnabled')->willReturn(true);
+        $flagsmith->method('getLocalEvaluationContext')->willReturn(null);
+
+        // When & Then
+        $this->expectException(FlagsmithClientError::class);
+        $flagsmith->isLocalEvaluationReady();
+    }
+
     public function testUpdateEnvironmentSetsEnvironment()
     {
         $flagsmith = (new Flagsmith('ser.abcdefg', Flagsmith::DEFAULT_API_URL, null, 10))
