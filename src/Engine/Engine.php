@@ -24,8 +24,8 @@ use Flow\JSONPath\JSONPathException;
 
 class Engine
 {
-    private const STRONGEST_PRIORITY = -INF;
-    private const WEAKEST_PRIORITY = +INF;
+    public const STRONGEST_PRIORITY = -INF;
+    public const WEAKEST_PRIORITY = +INF;
 
     /**
      * Get the evaluation result for a given context.
@@ -253,7 +253,7 @@ class Engine
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
                 /** @var array<mixed> $inValues */
-                if (is_array($contextValue)) {
+                if (is_array($condition->value)) {
                     $inValues = $condition->value;
                 } else {
                     $inValues = json_decode($condition->value, true);
