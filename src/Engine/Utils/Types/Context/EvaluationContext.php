@@ -69,15 +69,17 @@ class EvaluationContext
         $rules = [];
         foreach ($jsonRules as $jsonRule) {
             $rule = new SegmentRule();
-            $rule->type = SegmentRuleType::from($jsonRule->type);
+            $rule->type = $jsonRule->type instanceof SegmentRuleType
+                ? $jsonRule->type
+                : SegmentRuleType::from($jsonRule->type);
 
             $rule->conditions = [];
             foreach ($jsonRule->conditions ?? [] as $jsonCondition) {
                 $condition = new SegmentCondition();
                 $condition->property = $jsonCondition->property;
-                $condition->operator = SegmentConditionOperator::from(
-                    $jsonCondition->operator,
-                );
+                $condition->operator = $jsonCondition->operator instanceof SegmentConditionOperator
+                    ? $jsonCondition->operator
+                    : SegmentConditionOperator::from($jsonCondition->operator);
                 $condition->value = $jsonCondition->value;
                 $rule->conditions[] = $condition;
             }
