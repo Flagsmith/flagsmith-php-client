@@ -253,7 +253,7 @@ class Engine
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
                 /** @var array<mixed> $inValues */
-                if (is_array($contextValue)) {
+                if (is_array($condition->value)) {
                     $inValues = $condition->value;
                 } else {
                     $inValues = json_decode($condition->value, true);
