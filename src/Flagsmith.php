@@ -389,7 +389,7 @@ class Flagsmith
         assert($this->isLocalEvaluationReady());
 
         $context = Mappers::mapContextAndIdentityToContext(
-            context: $this->localEvaluationContext,
+            context: $this->getLocalEvaluationContext(),
             identifier: $identifier,
             traits: $traits,
         );
@@ -415,7 +415,7 @@ class Flagsmith
      */
     public function updateEnvironment(): void
     {
-        if (!$this->enableLocalEvaluation) {
+        if (!$this->isLocalEvaluationEnabled()) {
             return;
         }
 
@@ -447,7 +447,7 @@ class Flagsmith
     {
         assert($this->isLocalEvaluationReady());
 
-        $evaluationResult = Engine::getEvaluationResult($this->localEvaluationContext);
+        $evaluationResult = Engine::getEvaluationResult($this->getLocalEvaluationContext());
 
         return Flags::fromEvaluationResult(
             $evaluationResult,
@@ -469,7 +469,7 @@ class Flagsmith
         assert($this->isLocalEvaluationReady());
 
         $context = Mappers::mapContextAndIdentityToContext(
-            context: $this->localEvaluationContext,
+            context: $this->getLocalEvaluationContext(),
             identifier: $identifier,
             traits: $traits,
         );
