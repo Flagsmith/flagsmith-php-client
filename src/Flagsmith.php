@@ -332,7 +332,7 @@ class Flagsmith
     public function getEnvironmentFlags(): Flags
     {
         if ($this->isLocalEvaluationReady()) {
-            return $this->getEnvironmentFlagsFromDocument();
+            return $this->getEnvironmentFlagsFromLocalEvaluationContext();
         }
 
         return $this->getEnvironmentFlagsFromApi();
@@ -433,7 +433,7 @@ class Flagsmith
      * Get the environment flags from document.
      * @return Flags
      */
-    private function getEnvironmentFlagsFromDocument(): Flags
+    private function getEnvironmentFlagsFromLocalEvaluationContext(): Flags
     {
         assert($this->isLocalEvaluationReady());
 
@@ -490,7 +490,7 @@ class Flagsmith
             );
         } catch (FlagsmithAPIError $e) {
             if (isset($this->offlineHandler)) {
-                return $this->getEnvironmentFlagsFromDocument();
+                return $this->getEnvironmentFlagsFromLocalEvaluationContext();
             }
             if (isset($this->defaultFlagHandler)) {
                 return (new Flags())

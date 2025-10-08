@@ -109,43 +109,63 @@ class FlagsmithClientTest extends TestCase
         $flagsmith->isLocalEvaluationReady();
     }
 
-    public function testUpdateEnvironmentSetsEnvironment()
+    public function test_updateEnvironment__updates_local_evaluation_context(): void
     {
-        $flagsmith = (new Flagsmith('ser.abcdefg', Flagsmith::DEFAULT_API_URL, null, 10))
-            ->withClient(ClientFixtures::getMockClient());
+        // Given
+        $flagsmith = $this->getMockBuilder(Flagsmith::class)
+            ->setConstructorArgs(['ser.api_key'])
+            ->onlyMethods(['isLocalEvaluationEnabled'])
+            ->getMock();
+        $flagsmith->method('isLocalEvaluationEnabled')->willReturn(true);
+        $flagsmith->withClient(ClientFixtures::getMockClient());
+        $this->assertNull($flagsmith->getLocalEvaluationContext());
 
+        // When
         $flagsmith->updateEnvironment();
 
-        $this->assertNotNull($flagsmith->getEnvironment());
-        $this->assertEquals($flagsmith->getEnvironment(), ClientFixtures::getEnvironmentModel());
+        // Then
+        $this->assertInstanceOf(EvaluationContext::class, $flagsmith->getLocalEvaluationContext());
     }
 
-    public function testGetEnvironmentFlagsCallsApiWhenNoLocalEnvironment()
+    public function test_getEnvironmentFlags__calls_api_if_no_local_context(): void
     {
-        $flagsmith = (new Flagsmith('api_key'))
-            ->withClient(ClientFixtures::getMockClient());
+        // Given
+        $flagsmith = $this->getMockBuilder(Flagsmith::class)
+            ->setConstructorArgs(['api_key'])
+            ->onlyMethods(['isLocalEvaluationReady'])
+            ->getMock();
+        $flagsmith->method('isLocalEvaluationReady')->willReturn(false);
+        $flagsmith->withClient(ClientFixtures::getMockClient());
 
+        // When
         $allFlags = $flagsmith->getEnvironmentFlags()->allFlags();
 
+        // Then
         $this->assertTrue($allFlags[0]->enabled);
         $this->assertEquals($allFlags[0]->value, 'some-value');
         $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
     }
 
-    public function testGetEnvironmentFlagsUsesLocalEnvironmentWhenAvailable()
+    public function test_getEnvironmentFlags__uses_local_context_if_available(): void
     {
-        $flagsmith = (new Flagsmith('api_key'))
-            ->withClient(ClientFixtures::getMockClient());
+        // Given
+        $flagsmith = $this->getMockBuilder(Flagsmith::class)
+            ->setConstructorArgs(['ser.api_key'])
+            ->onlyMethods(['isLocalEvaluationEnabled'])
+            ->getMock();
+        $flagsmith->method('isLocalEvaluationEnabled')->willReturn(true);
 
+        // Given
+        $flagsmith->withClient(ClientFixtures::getMockClient());
         $flagsmith->updateEnvironment();
 
+        // When
         $allFlags = $flagsmith->getEnvironmentFlags()->allFlags();
-        $environmentModel = ClientFixtures::getEnvironmentModel();
-        $firstFeatureState = $environmentModel->getFeatureStates()[0];
 
-        $this->assertEquals($allFlags[0]->feature_name, $firstFeatureState->getFeature()->getName());
-        $this->assertEquals($allFlags[0]->enabled, $firstFeatureState->getEnabled());
-        $this->assertEquals($allFlags[0]->value, $firstFeatureState->getValue());
+        // Then
+        $this->assertTrue($allFlags[0]->enabled);
+        $this->assertEquals($allFlags[0]->value, 'some-value');
+        $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
     }
 
     public function testGetIdentityFlagsCallsApiWhenNoLocalEnvironmentNoTraits()
