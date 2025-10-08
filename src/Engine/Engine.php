@@ -24,8 +24,8 @@ use Flow\JSONPath\JSONPathException;
 
 class Engine
 {
-    private const STRONGEST_PRIORITY = -INF;
-    private const WEAKEST_PRIORITY = +INF;
+    public const STRONGEST_PRIORITY = -INF;
+    public const WEAKEST_PRIORITY = +INF;
 
     /**
      * Get the evaluation result for a given context.
