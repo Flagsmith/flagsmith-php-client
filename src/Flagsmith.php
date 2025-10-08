@@ -4,7 +4,6 @@ namespace Flagsmith;
 
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Engine\Engine;
-use Flagsmith\Engine\Environments\EnvironmentModel;
 use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Identities\Traits\TraitModel;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
@@ -322,15 +321,6 @@ class Flagsmith
     public function withUseCacheAsFailover(bool $useCacheAsFailover): self
     {
         return $this->with('useCacheAsFailover', $useCacheAsFailover);
-    }
-
-    /**
-     * Get the environment model.
-     * @return EnvironmentModel|null
-     */
-    public function getEnvironment(): ?EnvironmentModel
-    {
-        return $this->environment;
     }
 
     /**
