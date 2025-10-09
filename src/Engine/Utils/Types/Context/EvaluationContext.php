@@ -37,7 +37,7 @@ class EvaluationContext
         }
 
         $context->segments = [];
-        foreach ($jsonContext->segments as $jsonSegment) {
+        foreach (($jsonContext->segments ?? []) as $jsonSegment) {
             $segment = new SegmentContext();
             $segment->key = $jsonSegment->key;
             $segment->name = $jsonSegment->name;

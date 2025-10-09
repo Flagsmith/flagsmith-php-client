@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Flagsmith\Offline;
 
-use Flagsmith\Engine\Environments\EnvironmentModel;
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 
 interface IOfflineHandler
 {
-    public function getEnvironment(): ?EnvironmentModel;
+    public function getEvaluationContext(): EvaluationContext;
 }

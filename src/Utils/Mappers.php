@@ -50,6 +50,7 @@ class Mappers
     }
 
     /**
+     * Attaches identity context into a new evaluation context based on $context
      * @param EvaluationContext $context
      * @param string $identifier
      * @param object $traits

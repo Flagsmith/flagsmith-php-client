@@ -80,11 +80,10 @@ class Flagsmith
         $this->offlineMode = $offlineMode;
         $this->offlineHandler = $offlineHandler;
 
+        // The offline handler can be used as backup if online but the request fails
         if (!is_null($offlineHandler)) {
-            $this->environment = $offlineHandler->getEnvironment();
+            $this->localEvaluationContext = $offlineHandler->getEvaluationContext();
         }
-
-        $this->updateLocalEnvironmentEnabled($environmentTtl);
 
         if (!$offlineMode) {
             if (is_null($apiKey)) {
@@ -95,6 +94,7 @@ class Flagsmith
             $this->host = !is_null($host) ? rtrim($host, '/') : self::DEFAULT_API_URL;
             $this->customHeaders = $customHeaders ?? $this->customHeaders;
             $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
+            $this->enableLocalEvaluation = !is_null($environmentTtl);
             $this->retries = $retries ?? new Retry(3);
             $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
             $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
@@ -103,43 +103,13 @@ class Flagsmith
             $this->client = Psr18ClientDiscovery::find();
             $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
             $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
+
+            if ($this->enableLocalEvaluation && !str_starts_with($this->apiKey, 'ser.')) {
+                throw new ValueError(
+                    'In order to use local evaluation, please generate a server key in the environment settings page.'
+                );
+            }
         }
-    }
-
-    /** @return bool  */
-    public function isLocalEvaluationEnabled()
-    {
-        return $this->enableLocalEvaluation;
-    }
-
-    /**
-     * @return bool
-     * @throws \ValueError
-     * @throws FlagsmithClientError
-     */
-    public function isLocalEvaluationReady(): bool
-    {
-        if (!$this->isLocalEvaluationEnabled()) {
-            return false;
-        }
-
-        if (!str_starts_with($this->apiKey, 'ser.')) {
-            throw new ValueError(
-                'In order to use local evaluation, please generate a server key in the environment settings page.'
-            );
-        }
-
-        if ($this->getLocalEvaluationContext() === null) {
-            throw new FlagsmithClientError('No evaluation context present.');
-        }
-
-        return true;
-    }
-
-    /** @return ?EvaluationContext */
-    public function getLocalEvaluationContext(): ?EvaluationContext
-    {
-        return $this->localEvaluationContext;
     }
 
     /**
@@ -169,7 +139,7 @@ class Flagsmith
      */
     public function withEnvironmentTtl(?int $environmentTtl): self
     {
-        $this->updateLocalEnvironmentEnabled($environmentTtl);
+        $this->enableLocalEvaluation = $environmentTtl != null;
         return $this->with('environmentTtl', $environmentTtl);
     }
 
@@ -324,6 +294,15 @@ class Flagsmith
     }
 
     /**
+     * Return the local evaluation context, if any
+     * @return ?EvaluationContext
+     */
+    public function getLocalEvaluationContext(): ?EvaluationContext
+    {
+        return $this->localEvaluationContext;
+    }
+
+    /**
      * Get all the default for flags for the current environment.
      * @return Flags
      *
@@ -331,7 +310,7 @@ class Flagsmith
      */
     public function getEnvironmentFlags(): Flags
     {
-        if ($this->isLocalEvaluationReady()) {
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->localEvaluationContext) {
             return $this->getEnvironmentFlagsFromLocalEvaluationContext();
         }
 
@@ -357,8 +336,8 @@ class Flagsmith
     public function getIdentityFlags(string $identifier, ?object $traits = null, ?bool $transient = false): Flags
     {
         $traits = $traits ?? (object)[];
-        if ($this->isLocalEvaluationReady()) {
-            return $this->getIdentityFlagsFromDocument($identifier, $traits);
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->localEvaluationContext) {
+            return $this->getIdentityFlagsFromLocalEvaluationContext($identifier, $traits);
         }
 
         return $this->getIdentityFlagsFromApi($identifier, $traits, $transient);
@@ -376,10 +355,12 @@ class Flagsmith
      */
     public function getIdentitySegments(string $identifier, ?object $traits = null): array
     {
-        assert($this->isLocalEvaluationReady());
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('Local evaluation required to obtain identity segments.');
+        }
 
         $context = Mappers::mapContextAndIdentityToContext(
-            context: $this->getLocalEvaluationContext(),
+            context: $this->localEvaluationContext,
             identifier: $identifier,
             traits: $traits,
         );
@@ -398,14 +379,14 @@ class Flagsmith
     }
 
     /**
-     * Externalised method to update the environement cache.
+     * Download and convert the Environment Document into an Evaluation Context
      * @return void
      *
      * @throws FlagsmithThrowable
      */
     public function updateEnvironment(): void
     {
-        if (!$this->isLocalEvaluationEnabled()) {
+        if (!$this->enableLocalEvaluation) {
             return;
         }
 
@@ -421,23 +402,16 @@ class Flagsmith
     }
 
     /**
-     * @param ?int $ttl
-     * @return void
-     */
-    private function updateLocalEnvironmentEnabled($ttl): void
-    {
-        $this->enableLocalEvaluation = $ttl != null && $ttl > 0;
-    }
-
-    /**
      * Get the environment flags from document.
      * @return Flags
      */
     private function getEnvironmentFlagsFromLocalEvaluationContext(): Flags
     {
-        assert($this->isLocalEvaluationReady());
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('Evaluation context is not present');
+        }
 
-        $evaluationResult = Engine::getEvaluationResult($this->getLocalEvaluationContext());
+        $evaluationResult = Engine::getEvaluationResult($this->localEvaluationContext);
 
         return Flags::fromEvaluationResult(
             $evaluationResult,
@@ -454,12 +428,14 @@ class Flagsmith
      *
      * @throws FlagsmithClientError
      */
-    private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
+    private function getIdentityFlagsFromLocalEvaluationContext(string $identifier, object $traits): Flags
     {
-        assert($this->isLocalEvaluationReady());
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('Evaluation context is not present');
+        }
 
         $context = Mappers::mapContextAndIdentityToContext(
-            context: $this->getLocalEvaluationContext(),
+            context: $this->localEvaluationContext,
             identifier: $identifier,
             traits: $traits,
         );
@@ -526,7 +502,7 @@ class Flagsmith
             );
         } catch (FlagsmithAPIError $e) {
             if (isset($this->offlineHandler)) {
-                return $this->getIdentityFlagsFromDocument($identifier, $traits);
+                return $this->getIdentityFlagsFromLocalEvaluationContext($identifier, $traits);
             }
             if (isset($this->defaultFlagHandler)) {
                 return (new Flags())
