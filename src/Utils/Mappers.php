@@ -140,6 +140,7 @@ class Mappers
         $featuresToIdentifiers = [];
         foreach ($identityOverrides as $identityOverride) {
             $identityFeatures = $identityOverride->identity_features ?? [];
+            uksort($identityFeatures, fn ($a, $b) => strcasecmp($a->feature->name, $b->feature->name));
             if (empty($identityFeatures)) {
                 continue;
             }
