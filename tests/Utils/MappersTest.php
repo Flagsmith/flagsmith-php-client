@@ -2,12 +2,12 @@
 
 namespace FlagsmithTest\Utils;
 
+use FlagsmithTest\ClientFixtures;
 use Flagsmith\Engine\Utils\Types\Context\EnvironmentContext;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
 use Flagsmith\Engine\Utils\Types\Context\SegmentConditionOperator;
 use Flagsmith\Utils\Mappers;
-use FlagsmithTest\DataFixtures;
 use PHPUnit\Framework\TestCase;
 
 class MappersTest extends TestCase
@@ -15,13 +15,10 @@ class MappersTest extends TestCase
     public function testMapEnvironmentDocumentToContextProducesEvaluationContext(): void
     {
         // Given
-        $environmentDocument = json_decode(
-            json: DataFixtures::loadFileContents('environment.json'),
-            associative: false,
-        );
+        $environment = ClientFixtures::getEnvironmentModel();
 
         // When
-        $context = Mappers::mapEnvironmentDocumentToContext($environmentDocument);
+        $context = Mappers::mapEnvironmentDocumentToContext($environment);
 
         // Then
         $this->assertInstanceOf(EvaluationContext::class, $context);

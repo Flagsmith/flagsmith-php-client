@@ -82,7 +82,8 @@ class Flagsmith
 
         // The offline handler can be used as backup if online but the request fails
         if (!is_null($offlineHandler)) {
-            $this->localEvaluationContext = $offlineHandler->getEvaluationContext();
+            $environment = $offlineHandler->getEnvironment();
+            $this->localEvaluationContext = Mappers::mapEnvironmentDocumentToContext($environment);
         }
 
         if (!$offlineMode) {

@@ -115,7 +115,7 @@ class Mappers
             $feature->priority = $featureState->feature_segment?->priority ?? null;
 
             $feature->variants = [];
-            $multivariateFeatureStateValues = $featureState->multivariate_feature_state_values ?? [];
+            $multivariateFeatureStateValues = (array) $featureState->multivariate_feature_state_values ?? [];
             uksort($multivariateFeatureStateValues, fn ($a, $b) => $a->id <=> $b->id);
             foreach ($multivariateFeatureStateValues as $multivariateFeatureStateValue) {
                 $variant = new FeatureValue();

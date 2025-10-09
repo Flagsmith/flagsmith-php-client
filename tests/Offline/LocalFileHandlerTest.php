@@ -1,7 +1,7 @@
 <?php
 
-use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Offline\LocalFileHandler;
+use FlagsmithTest\ClientFixtures;
 use PHPUnit\Framework\TestCase;
 
 class LocalFileHandlerTest extends TestCase
@@ -9,14 +9,12 @@ class LocalFileHandlerTest extends TestCase
     public function testLocalFileHandler()
     {
         // Given
-        $filePath = __DIR__ . '/../Data/environment.json';
+        $environmentModel = ClientFixtures::getEnvironmentModel();
 
         // When
-        $fileHandler = new LocalFileHandler($filePath);
+        $localFileHandler = new LocalFileHandler(dirname(__FILE__).'/../Data/environment.json');
 
         // Then
-        $context = $fileHandler->getEvaluationContext();
-        $this->assertInstanceOf(EvaluationContext::class, $context);
-        $this->assertEquals('Test environment', $context->environment->name);
+        $this->assertEquals($localFileHandler->getEnvironment(), $environmentModel);
     }
 }

@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Flagsmith\Offline;
 
-use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
+use Flagsmith\Engine\Environments\EnvironmentModel;
 use Flagsmith\Exceptions\FlagsmithClientError;
-use Flagsmith\Utils\Mappers;
 
 class LocalFileHandler implements IOfflineHandler
 {
@@ -17,7 +16,7 @@ class LocalFileHandler implements IOfflineHandler
         $this->filePath = $filePath;
     }
 
-    public function getEvaluationContext(): EvaluationContext
+    public function getEnvironment(): ?EnvironmentModel
     {
         if (!file_exists($this->filePath)) {
             throw new FlagsmithClientError("Unable to read evaluation context from file {$this->filePath}");
@@ -29,6 +28,6 @@ class LocalFileHandler implements IOfflineHandler
             flags: JSON_THROW_ON_ERROR,
         );
 
-        return Mappers::mapEnvironmentDocumentToContext($environmentDocument);
+        return EnvironmentModel::build($environmentDocument);
     }
 }
