@@ -107,6 +107,7 @@ class Mappers
         foreach ($featureStates as $featureState) {
             $feature = new FeatureContext();
             $feature->key = (string) ($featureState->django_id ?? $featureState->featurestate_uuid);
+            $feature->feature_key = (string) $featureState->feature->id;
             $feature->name = $featureState->feature->name;
             $feature->enabled = $featureState->enabled;
             $feature->value = $featureState->feature_state_value;

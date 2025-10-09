@@ -104,7 +104,7 @@ class EvaluationContext
         foreach ($jsonFeatures as $jsonFeature) {
             $feature = new FeatureContext();
             $feature->key = $jsonFeature->key;
-            $feature->feature_key = $jsonFeature->feature_key;
+            $feature->feature_key = (string) $jsonFeature->feature_key;
             $feature->name = $jsonFeature->name;
             $feature->enabled = $jsonFeature->enabled;
             $feature->value = $jsonFeature->value;
