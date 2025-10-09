@@ -115,7 +115,7 @@ class Mappers
             $feature->priority = $featureState->feature_segment?->priority ?? null;
 
             $feature->variants = [];
-            $multivariateFeatureStateValues = (array) $featureState->multivariate_feature_state_values ?? [];
+            $multivariateFeatureStateValues = ((array) $featureState->multivariate_feature_state_values) ?? [];
             // Sort by ID to ensure deterministic percentage ranges for variant selection
             uksort($multivariateFeatureStateValues, fn ($a, $b) => $a->id <=> $b->id);
             foreach ($multivariateFeatureStateValues as $multivariateFeatureStateValue) {
@@ -140,7 +140,7 @@ class Mappers
         /** @var array<string, array<string>> */
         $featuresToIdentifiers = [];
         foreach ($identityOverrides as $identityOverride) {
-            $identityFeatures = $identityOverride->identity_features ?? [];
+            $identityFeatures = ((array) $identityOverride->identity_features) ?? [];
             // Sort by feature name to ensure consistent serialization order for $overridesKey
             uksort($identityFeatures, fn ($a, $b) => strcasecmp($a->feature->name, $b->feature->name));
             if (empty($identityFeatures)) {
