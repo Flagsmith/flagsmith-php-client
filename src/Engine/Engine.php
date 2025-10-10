@@ -291,7 +291,7 @@ class Engine
                 $threshold = $hashing->getHashedPercentageForObjectIds(
                     $objectIds,
                 );
-                return $threshold <= floatval($condition->value);
+                return $threshold <= ((float) $condition->value);
 
             case SegmentConditionOperator::MODULO:
                 if (!is_numeric($contextValue)) {
@@ -308,7 +308,7 @@ class Engine
                     return false;
                 }
 
-                return floatval($contextValue) % $divisor === $remainder;
+                return ((float) $contextValue) % ((float) $divisor) === ((float) $remainder);
 
             case SegmentConditionOperator::IS_NOT_SET:
                 return $contextValue === null;
@@ -323,9 +323,7 @@ class Engine
                 return !str_contains($contextValue, $condition->value);
 
             case SegmentConditionOperator::REGEX:
-                return boolval(
-                    preg_match("/{$condition->value}/", $contextValue),
-                );
+                return (bool) preg_match("/{$condition->value}/", $contextValue);
         }
 
         if ($contextValue === null) {
@@ -360,33 +358,33 @@ class Engine
     }
 
     /**
+     * Return a trait value by name, or a context value by JSONPath, or null
      * @param EvaluationContext $context
      * @param string $property
-     * @return mixed|array<mixed>|null
+     * @return ?mixed
      */
     private static function _getContextValue($context, $property)
     {
-        if (str_starts_with($property, '$.')) {
-            try {
-                $json = new JSONPath($context);
-                $results = $json->find($property)->getData();
-            } catch (JSONPathException) {
-                // The unlikely case when a trait starts with "$." but isn't JSONPath
-                $escapedProperty = addslashes($property);
-                $path = "$.identity.traits['{$escapedProperty}']";
-                $json = new JSONPath($context);
-                $results = $json->find($path)->getData();
+        if ($context->identity !== null) {
+            $hasTrait = array_key_exists($property, $context->identity->traits);
+            if ($hasTrait) {
+                return $context->identity->traits[$property];
             }
-
-            return match (count($results)) {
-                0 => null,
-                1 => $results[0],
-                default => $results,
-            };
         }
 
-        if ($context->identity !== null) {
-            return $context->identity->traits[$property] ?? null;
+        if (str_starts_with($property, '$.')) {
+            try {
+                $jsonpath = new JSONPath($context);
+                $results = $jsonpath->find($property)->getData();
+            } catch (JSONPathException) {
+                return null;
+            }
+
+            if (empty($results)) {
+                return null;
+            }
+
+            return $results[0];
         }
 
         return null;
