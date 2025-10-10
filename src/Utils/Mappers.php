@@ -165,7 +165,7 @@ class Mappers
         $segments = [];
         foreach ($featuresToIdentifiers as $serializedOverridesKey => $identifiers) {
             $segment = new SegmentContext();
-            $segment->key = hash('sha256', $serializedOverridesKey);
+            $segment->key = '';  // Not used in identity overrides
             $segment->name = 'identity_overrides';
 
             $identifiersCondition = new SegmentCondition();
@@ -182,7 +182,7 @@ class Mappers
             foreach (unserialize($serializedOverridesKey) as $overrideKey) {
                 [$featureKey, $featureName, $enabled, $value] = $overrideKey;
                 $feature = new FeatureContext();
-                $feature->key = '--irrelevant--';
+                $feature->key = '';  // Not used in identity overrides
                 $feature->feature_key = $featureKey;
                 $feature->name = $featureName;
                 $feature->enabled = $enabled;
@@ -191,7 +191,8 @@ class Mappers
                 $segment->overrides[] = $feature;
             }
 
-            $segments[$segment->key] = $segment;
+            $segmentKey = hash('sha256', $serializedOverridesKey);
+            $segments[$segmentKey] = $segment;
         }
 
         return $segments;

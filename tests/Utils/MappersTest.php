@@ -47,7 +47,7 @@ class MappersTest extends TestCase
 
         $overrideKey = '1dfdec3e4c67121138b1faa01b82f9f731c692842b865f263824bfabf46d5fff';
         $this->assertArrayHasKey($overrideKey, $context->segments);
-        $this->assertEquals($overrideKey, $context->segments[$overrideKey]->key);
+        $this->assertEquals('', $context->segments[$overrideKey]->key);
         $this->assertEquals('identity_overrides', $context->segments[$overrideKey]->name);
         $this->assertCount(1, $context->segments[$overrideKey]->rules);
         $this->assertCount(1, $context->segments[$overrideKey]->overrides);
@@ -60,7 +60,7 @@ class MappersTest extends TestCase
         $this->assertEquals(SegmentConditionOperator::IN, $context->segments[$overrideKey]->rules[0]->conditions[0]->operator);
         $this->assertEquals(['overridden-id'], $context->segments[$overrideKey]->rules[0]->conditions[0]->value);
 
-        $this->assertEquals('--irrelevant--', $context->segments[$overrideKey]->overrides[0]->key);
+        $this->assertEquals('', $context->segments[$overrideKey]->overrides[0]->key);
         $this->assertEquals(1, $context->segments[$overrideKey]->overrides[0]->feature_key);
         $this->assertEquals('some_feature', $context->segments[$overrideKey]->overrides[0]->name);
         $this->assertFalse($context->segments[$overrideKey]->overrides[0]->enabled);
