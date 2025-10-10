@@ -298,7 +298,12 @@ class Engine
                     return false;
                 }
 
-                [$divisor, $remainder] = explode('|', $condition->value);
+                $parts = explode('|', (string) $condition->value);
+                if (count($parts) !== 2) {
+                    return false;
+                }
+
+                [$divisor, $remainder] = $parts;
                 if (!is_numeric($divisor) || !is_numeric($remainder)) {
                     return false;
                 }
