@@ -9,6 +9,7 @@ use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Exceptions\FeatureStateNotFound;
 use Flagsmith\Engine\Utils\Hashing;
 use Flagsmith\Engine\Utils\Semver;
+use Flagsmith\Engine\Utils\StringValue;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Engine\Utils\Types\Context\FeatureContext;
 use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
@@ -252,16 +253,24 @@ class Engine
 
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
-                /** @var array<mixed> $inValues */
                 if (is_array($condition->value)) {
                     $inValues = $condition->value;
                 } else {
-                    $inValues = json_decode($condition->value, true);
-                    $jsonDecodingFailed = $inValues === null;
-                    if ($jsonDecodingFailed || !is_array($inValues)) {
+                    try {
+                        $inValues = json_decode(
+                            $condition->value,
+                            associative: false,  // Possibly catch objects
+                            flags: \JSON_THROW_ON_ERROR,
+                        );
+                        if (!is_array($inValues)) {
+                            throw new \ValueError('Invalid JSON array');
+                        }
+                    } catch (\JsonException | \ValueError) {
                         $inValues = explode(',', $condition->value);
                     }
                 }
+                $inValues = array_map(fn ($value) => StringValue::from($value), $inValues);
+                $contextValue = StringValue::from($contextValue);
                 return in_array($contextValue, $inValues, strict: true);
 
             case SegmentConditionOperator::PERCENTAGE_SPLIT:
