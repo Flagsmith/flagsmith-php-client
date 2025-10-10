@@ -32,7 +32,7 @@ class Engine
      * Get the evaluation result for a given context.
      *
      * @param EvaluationContext $context The evaluation context.
-     * @return EvaluationResult EvaluationResult containing the context, flags, and segments
+     * @return EvaluationResult EvaluationResult containing the evaluated flags and matched segments.
      */
     public static function getEvaluationResult($context): EvaluationResult
     {
