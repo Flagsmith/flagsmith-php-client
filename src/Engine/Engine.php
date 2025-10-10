@@ -58,10 +58,6 @@ class Engine
             $segmentResult->name = $segment->name;
             $evaluatedSegments[] = $segmentResult;
 
-            if (empty($segment->overrides)) {
-                continue;
-            }
-
             foreach ($segment->overrides as $overrideFeature) {
                 $featureKey = $overrideFeature->feature_key;
                 $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
