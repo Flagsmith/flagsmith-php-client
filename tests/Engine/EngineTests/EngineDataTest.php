@@ -10,41 +10,36 @@ class EngineDataTest extends TestCase
 {
     private int $attempt = 0;
 
-    /** @return array<array<mixed>> */
-    public function extractTestCases()
+    /** @return \Generator<string, array<array<string, mixed>>> */
+    public function extractTestCases(): \Generator
     {
-        $testDataContent = file_get_contents(
-            __DIR__ .
-                '/EngineTestData/data/environment_n9fbf9h3v4fFgH3U3ngWhb.json',
-        );
-        $testData = json_decode($testDataContent, associative: false);
+        $testCasePaths = glob(__DIR__ . '/EngineTestData/test_cases/test_*.{json,jsonc}', \GLOB_BRACE);
+        foreach ($testCasePaths as $testCasePath) {
+            $testCaseJson = file_get_contents($testCasePath);
+            $testCase = json5_decode($testCaseJson);
 
-        $parameters = [];
-        foreach ($testData->test_cases as $testCase) {
-            $context = EvaluationContext::fromJsonObject($testCase->context);
-            $parameters[] = [$context, $testCase->result];
+            $testName = basename($testCasePath);
+            yield $testName => [[
+                'context' => EvaluationContext::fromJsonObject($testCase->context),
+                'result' => $testCase->result,
+            ]];
         }
-
-        return $parameters;
     }
 
     /**
      * @dataProvider extractTestCases
-     * @param EvaluationContext $evaluationContext
-     * @param object $expectedEvaluationResult
+     * @param array<string, mixed> $case
      * @return void
      */
-    public function testEngine(
-        $evaluationContext,
-        $expectedEvaluationResult,
-    ): void {
+    public function testEngine($case): void
+    {
         // When
-        $evaluationResult = Engine::getEvaluationResult($evaluationContext);
+        $result = Engine::getEvaluationResult($case['context']);
 
         // Then
         $this->assertEquals(
-            json_decode(json_encode($expectedEvaluationResult), true),
-            json_decode(json_encode($evaluationResult), true),
+            json_decode(json_encode($case['result']), associative: true),
+            json_decode(json_encode($result), associative: true),
         );
     }
 }
