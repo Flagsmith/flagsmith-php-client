@@ -249,6 +249,9 @@ class Engine
 
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
+                if ($contextValue === null) {
+                    return false;
+                }
                 if (is_array($condition->value)) {
                     $inValues = $condition->value;
                 } else {
@@ -304,7 +307,7 @@ class Engine
                     return false;
                 }
 
-                return ((float) $contextValue) % ((float) $divisor) === ((float) $remainder);
+                return fmod($contextValue, $divisor) === ((float) $remainder);
 
             case SegmentConditionOperator::IS_NOT_SET:
                 return $contextValue === null;
@@ -319,7 +322,7 @@ class Engine
                 return !str_contains($contextValue, $condition->value);
 
             case SegmentConditionOperator::REGEX:
-                return (bool) preg_match("/{$condition->value}/", $contextValue);
+                return (bool) preg_match("/{$condition->value}/", (string) $contextValue);
         }
 
         if ($contextValue === null) {
@@ -336,10 +339,13 @@ class Engine
             default => null,
         };
 
-        if (is_string($contextValue) && Semver::isSemver($contextValue)) {
-            $contextValue = Semver::removeSemverSuffix($contextValue);
-            return $operator !== null &&
-                version_compare($contextValue, $condition->value, $operator);
+        if ($operator === null) {
+            return false;
+        }
+
+        if (Semver::isSemver($condition->value) && is_string($contextValue)) {
+            $actualVersion = Semver::removeSemverSuffix($condition->value);
+            return version_compare($contextValue, $actualVersion, $operator);
         }
 
         return match ($operator) {
@@ -349,7 +355,6 @@ class Engine
             '>=' => $contextValue >= $condition->value,
             '<' => $contextValue < $condition->value,
             '<=' => $contextValue <= $condition->value,
-            default => false,
         };
     }
 

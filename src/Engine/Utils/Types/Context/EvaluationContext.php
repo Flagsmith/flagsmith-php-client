@@ -72,9 +72,9 @@ class EvaluationContext
                 $rule->conditions[] = $condition;
             }
 
-            $rule->rules = $jsonRule->rules
-                ? self::_convertRules($jsonRule->rules)
-                : [];
+            $rule->rules = empty($jsonRule->rules)
+                ? []
+                : self::_convertRules($jsonRule->rules);
 
             $rules[] = $rule;
         }
