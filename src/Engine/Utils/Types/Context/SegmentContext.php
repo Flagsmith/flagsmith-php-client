@@ -2,7 +2,6 @@
 
 namespace Flagsmith\Engine\Utils\Types\Context;
 
-// TODO: Port this to https://wiki.php.net/rfc/dataclass
 class SegmentContext
 {
     /** @var string */
@@ -16,4 +15,7 @@ class SegmentContext
 
     /** @var array<FeatureContext> */
     public $overrides;
+
+    /** @var ?array<string,mixed> */
+    public $metadata;
 }

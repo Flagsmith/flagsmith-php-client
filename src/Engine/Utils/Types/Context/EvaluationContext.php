@@ -2,7 +2,6 @@
 
 namespace Flagsmith\Engine\Utils\Types\Context;
 
-// TODO: Port this to https://wiki.php.net/rfc/dataclass
 class EvaluationContext
 {
     /** @var EnvironmentContext */
@@ -43,6 +42,7 @@ class EvaluationContext
             $segment->name = $jsonSegment->name;
             $segment->rules = self::_convertRules($jsonSegment->rules ?? []);
             $segment->overrides = array_values(self::_convertFeatures($jsonSegment->overrides ?? []));
+            $segment->metadata = (array) ($jsonSegment->metadata ?? []);
             $context->segments[$segment->key] = $segment;
         }
 
@@ -84,9 +84,9 @@ class EvaluationContext
                 $rule->conditions[] = $condition;
             }
 
-            $rule->rules = $jsonRule->rules
-                ? self::_convertRules($jsonRule->rules)
-                : [];
+            $rule->rules = empty($jsonRule->rules)
+                ? []
+                : self::_convertRules($jsonRule->rules);
 
             $rules[] = $rule;
         }

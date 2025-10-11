@@ -2,7 +2,6 @@
 
 namespace Flagsmith\Engine\Utils\Types\Context;
 
-// TODO: Port this to https://wiki.php.net/rfc/dataclass
 class FeatureContext
 {
     /** @var string */

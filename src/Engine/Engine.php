@@ -9,6 +9,7 @@ use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Exceptions\FeatureStateNotFound;
 use Flagsmith\Engine\Utils\Hashing;
 use Flagsmith\Engine\Utils\Semver;
+use Flagsmith\Engine\Utils\StringValue;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Engine\Utils\Types\Context\FeatureContext;
 use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
@@ -31,7 +32,7 @@ class Engine
      * Get the evaluation result for a given context.
      *
      * @param EvaluationContext $context The evaluation context.
-     * @return EvaluationResult EvaluationResult containing the context, flags, and segments
+     * @return EvaluationResult EvaluationResult containing the evaluated flags and matched segments.
      */
     public static function getEvaluationResult($context): EvaluationResult
     {
@@ -55,11 +56,8 @@ class Engine
             $segmentResult = new SegmentResult();
             $segmentResult->key = $segment->key;
             $segmentResult->name = $segment->name;
+            $segmentResult->metadata = $segment->metadata ?? null;
             $evaluatedSegments[] = $segmentResult;
-
-            if (empty($segment->overrides)) {
-                continue;
-            }
 
             foreach ($segment->overrides as $overrideFeature) {
                 $featureKey = $overrideFeature->feature_key;
@@ -252,16 +250,27 @@ class Engine
 
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
-                /** @var array<mixed> $inValues */
+                if ($contextValue === null) {
+                    return false;
+                }
                 if (is_array($condition->value)) {
                     $inValues = $condition->value;
                 } else {
-                    $inValues = json_decode($condition->value, true);
-                    $jsonDecodingFailed = $inValues === null;
-                    if ($jsonDecodingFailed || !is_array($inValues)) {
+                    try {
+                        $inValues = json_decode(
+                            $condition->value,
+                            associative: false,  // Possibly catch objects
+                            flags: \JSON_THROW_ON_ERROR,
+                        );
+                        if (!is_array($inValues)) {
+                            throw new \ValueError('Invalid JSON array');
+                        }
+                    } catch (\JsonException | \ValueError) {
                         $inValues = explode(',', $condition->value);
                     }
                 }
+                $inValues = array_map(fn ($value) => StringValue::from($value), $inValues);
+                $contextValue = StringValue::from($contextValue);
                 return in_array($contextValue, $inValues, strict: true);
 
             case SegmentConditionOperator::PERCENTAGE_SPLIT:
@@ -282,19 +291,24 @@ class Engine
                 $threshold = $hashing->getHashedPercentageForObjectIds(
                     $objectIds,
                 );
-                return $threshold <= floatval($condition->value);
+                return $threshold <= ((float) $condition->value);
 
             case SegmentConditionOperator::MODULO:
                 if (!is_numeric($contextValue)) {
                     return false;
                 }
 
-                [$divisor, $remainder] = explode('|', $condition->value);
+                $parts = explode('|', (string) $condition->value);
+                if (count($parts) !== 2) {
+                    return false;
+                }
+
+                [$divisor, $remainder] = $parts;
                 if (!is_numeric($divisor) || !is_numeric($remainder)) {
                     return false;
                 }
 
-                return floatval($contextValue) % $divisor === $remainder;
+                return fmod($contextValue, $divisor) === ((float) $remainder);
 
             case SegmentConditionOperator::IS_NOT_SET:
                 return $contextValue === null;
@@ -309,9 +323,7 @@ class Engine
                 return !str_contains($contextValue, $condition->value);
 
             case SegmentConditionOperator::REGEX:
-                return boolval(
-                    preg_match("/{$condition->value}/", $contextValue),
-                );
+                return (bool) preg_match("/{$condition->value}/", (string) $contextValue);
         }
 
         if ($contextValue === null) {
@@ -328,10 +340,13 @@ class Engine
             default => null,
         };
 
-        if (is_string($contextValue) && Semver::isSemver($contextValue)) {
-            $contextValue = Semver::removeSemverSuffix($contextValue);
-            return $operator !== null &&
-                version_compare($contextValue, $condition->value, $operator);
+        if ($operator === null) {
+            return false;
+        }
+
+        if (Semver::isSemver($condition->value) && is_string($contextValue)) {
+            $actualVersion = Semver::removeSemverSuffix($condition->value);
+            return version_compare($contextValue, $actualVersion, $operator);
         }
 
         return match ($operator) {
@@ -341,38 +356,37 @@ class Engine
             '>=' => $contextValue >= $condition->value,
             '<' => $contextValue < $condition->value,
             '<=' => $contextValue <= $condition->value,
-            default => false,
         };
     }
 
     /**
+     * Return a trait value by name, or a context value by JSONPath, or null
      * @param EvaluationContext $context
      * @param string $property
-     * @return mixed|array<mixed>|null
+     * @return ?mixed
      */
     private static function _getContextValue($context, $property)
     {
-        if (str_starts_with($property, '$.')) {
-            try {
-                $json = new JSONPath($context);
-                $results = $json->find($property)->getData();
-            } catch (JSONPathException) {
-                // The unlikely case when a trait starts with "$." but isn't JSONPath
-                $escapedProperty = addslashes($property);
-                $path = "$.identity.traits['{$escapedProperty}']";
-                $json = new JSONPath($context);
-                $results = $json->find($path)->getData();
+        if ($context->identity !== null) {
+            $hasTrait = array_key_exists($property, $context->identity->traits);
+            if ($hasTrait) {
+                return $context->identity->traits[$property];
             }
-
-            return match (count($results)) {
-                0 => null,
-                1 => $results[0],
-                default => $results,
-            };
         }
 
-        if ($context->identity !== null) {
-            return $context->identity->traits[$property] ?? null;
+        if (str_starts_with($property, '$.')) {
+            try {
+                $jsonpath = new JSONPath($context);
+                $results = $jsonpath->find($property)->getData();
+            } catch (JSONPathException) {
+                return null;
+            }
+
+            if (empty($results)) {
+                return null;
+            }
+
+            return $results[0];
         }
 
         return null;
