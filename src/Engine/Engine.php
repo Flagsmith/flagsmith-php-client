@@ -56,6 +56,7 @@ class Engine
             $segmentResult = new SegmentResult();
             $segmentResult->key = $segment->key;
             $segmentResult->name = $segment->name;
+            $segmentResult->metadata = $segment->metadata ?? null;
             $evaluatedSegments[] = $segmentResult;
 
             foreach ($segment->overrides as $overrideFeature) {

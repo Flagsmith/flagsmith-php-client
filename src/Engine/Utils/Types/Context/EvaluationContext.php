@@ -42,6 +42,7 @@ class EvaluationContext
             $segment->name = $jsonSegment->name;
             $segment->rules = self::_convertRules($jsonSegment->rules ?? []);
             $segment->overrides = array_values(self::_convertFeatures($jsonSegment->overrides ?? []));
+            $segment->metadata = (array) ($jsonSegment->metadata ?? []);
             $context->segments[$segment->key] = $segment;
         }
 

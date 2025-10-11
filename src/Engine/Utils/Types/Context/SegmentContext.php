@@ -15,4 +15,7 @@ class SegmentContext
 
     /** @var array<FeatureContext> */
     public $overrides;
+
+    /** @var ?array<string,mixed> */
+    public $metadata;
 }
