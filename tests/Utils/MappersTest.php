@@ -32,6 +32,8 @@ class MappersTest extends TestCase
         $this->assertEquals('Test segment', $context->segments[0]->name);
         $this->assertCount(1, $context->segments[0]->rules);
         $this->assertEmpty($context->segments[0]->overrides);
+        $this->assertEquals('api', $context->segments[0]->metadata['source']);
+        $this->assertEquals('1', $context->segments[0]->metadata['flagsmith_id']);
 
         $this->assertEquals(SegmentRuleType::ALL, $context->segments[0]->rules[0]->type);
         $this->assertEmpty($context->segments[0]->rules[0]->conditions);

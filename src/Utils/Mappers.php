@@ -32,9 +32,13 @@ class Mappers
         $context->segments = [];
         foreach ($environmentDocument->project->segments as $srcSegment) {
             $segment = new SegmentContext();
-            $segment->key = $srcSegment->id;
+            $segment->key = (string) $srcSegment->id;
             $segment->name = $srcSegment->name;
             $segment->rules = self::_mapEnvironmentDocumentRulesToContextRules($srcSegment->rules ?? []);
+            $segment->metadata = [
+                'source' => 'api',
+                'flagsmith_id' => $srcSegment->id,
+            ];
             $context->segments[$segment->key] = $segment;
 
             $overrides = self::_mapEnvironmentDocumentFeatureStatesToFeatureContexts($srcSegment->feature_states ?? []);
@@ -167,6 +171,7 @@ class Mappers
             $segment = new SegmentContext();
             $segment->key = '';  // Not used in identity overrides
             $segment->name = 'identity_overrides';
+            $segment->metadata = ['source' => 'identity_override'];
 
             $identifiersCondition = new SegmentCondition();
             $identifiersCondition->property = '$.identity.identifier';
