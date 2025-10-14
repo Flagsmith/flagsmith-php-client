@@ -119,13 +119,12 @@ class Mappers
             $feature->priority = $featureState->feature_segment?->priority ?? null;
 
             $feature->variants = [];
-            $multivariateFeatureStateValues = ((array) $featureState->multivariate_feature_state_values) ?? [];
-            // Sort by ID to ensure deterministic percentage ranges for variant selection
-            uksort($multivariateFeatureStateValues, fn ($a, $b) => $a->id <=> $b->id);
+            $multivariateFeatureStateValues = $featureState->multivariate_feature_state_values ?? [];
             foreach ($multivariateFeatureStateValues as $multivariateFeatureStateValue) {
                 $variant = new FeatureValue();
                 $variant->value = $multivariateFeatureStateValue->multivariate_feature_option->value;
                 $variant->weight = $multivariateFeatureStateValue->weight;
+                $variant->priority = $multivariateFeatureStateValue->id;
                 $feature->variants[] = $variant;
             }
 
