@@ -9,7 +9,6 @@ use Flagsmith\Engine\Segments\SegmentEvaluator;
 use Flagsmith\Engine\Utils\Exceptions\FeatureStateNotFound;
 use Flagsmith\Engine\Utils\Hashing;
 use Flagsmith\Engine\Utils\Semver;
-use Flagsmith\Engine\Utils\StringValue;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Engine\Utils\Types\Context\FeatureContext;
 use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
@@ -27,6 +26,8 @@ class Engine
 {
     public const STRONGEST_PRIORITY = -INF;
     public const WEAKEST_PRIORITY = +INF;
+
+    private const VALID_CONTEXT_VALUE_TYPES = ['string', 'integer', 'boolean', 'double'];
 
     /**
      * Get the evaluation result for a given context.
@@ -247,6 +248,7 @@ class Engine
         $segmentKey,
     ): bool {
         $contextValue = self::_getContextValue($context, $condition->property);
+        $cast = self::_getCaster($contextValue);
 
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
@@ -269,8 +271,7 @@ class Engine
                         $inValues = explode(',', $condition->value);
                     }
                 }
-                $inValues = array_map(fn ($value) => StringValue::from($value), $inValues);
-                $contextValue = StringValue::from($contextValue);
+                $inValues = array_map($cast, $inValues);
                 return in_array($contextValue, $inValues, strict: true);
 
             case SegmentConditionOperator::PERCENTAGE_SPLIT:
@@ -317,10 +318,12 @@ class Engine
                 return $contextValue !== null;
 
             case SegmentConditionOperator::CONTAINS:
-                return str_contains($contextValue, $condition->value);
+                return is_string($contextValue) && is_string($condition->value)
+                    && str_contains($contextValue, $condition->value);
 
             case SegmentConditionOperator::NOT_CONTAINS:
-                return !str_contains($contextValue, $condition->value);
+                return is_string($contextValue) && is_string($condition->value)
+                    && !str_contains($contextValue, $condition->value);
 
             case SegmentConditionOperator::REGEX:
                 return (bool) preg_match("/{$condition->value}/", (string) $contextValue);
@@ -350,12 +353,12 @@ class Engine
         }
 
         return match ($operator) {
-            '==' => $contextValue == $condition->value,
-            '!=' => $contextValue != $condition->value,
-            '>' => $contextValue > $condition->value,
-            '>=' => $contextValue >= $condition->value,
-            '<' => $contextValue < $condition->value,
-            '<=' => $contextValue <= $condition->value,
+            '==' => $contextValue === $cast($condition->value),
+            '!=' => $contextValue !== $cast($condition->value),
+            '>' => $contextValue > $cast($condition->value),
+            '>=' => $contextValue >= $cast($condition->value),
+            '<' => $contextValue < $cast($condition->value),
+            '<=' => $contextValue <= $cast($condition->value),
         };
     }
 
@@ -386,10 +389,31 @@ class Engine
                 return null;
             }
 
-            return $results[0];
+            if (in_array(gettype($results[0]), self::VALID_CONTEXT_VALUE_TYPES)) {
+                return $results[0];
+            };
         }
 
         return null;
+    }
+
+    /**
+     * Get a condition value type caster according to a context value
+     * @param mixed $contextValue
+     * @return ?callable
+     */
+    private static function _getCaster($contextValue): ?callable
+    {
+        if (!in_array(gettype($contextValue), self::VALID_CONTEXT_VALUE_TYPES)) {
+            return null;
+        }
+
+        return match (gettype($contextValue)) {
+            'boolean' => fn ($v) => !in_array($v, ['False', 'false']),
+            'string' => 'strval',
+            'integer' => fn ($v) => is_numeric($v) ? (int) $v : $v,
+            'double' => fn ($v) => is_numeric($v) ? (float) $v : $v,
+        };
     }
 
     /**
