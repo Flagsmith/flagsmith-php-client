@@ -135,8 +135,12 @@ class Engine
                 $splitKey,
             ]);
 
+            // Ensure variants are selected consistently
+            $variants = $feature->variants;
+            usort($variants, fn ($a, $b) => $a->priority <=> $b->priority);
+
             $startPercentage = 0.0;
-            foreach ($feature->variants as $variant) {
+            foreach ($variants as $variant) {
                 $limit = $variant->weight + $startPercentage;
                 if (
                     $startPercentage <= $percentageValue &&
