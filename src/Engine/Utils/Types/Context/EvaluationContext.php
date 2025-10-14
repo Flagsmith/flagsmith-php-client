@@ -114,6 +114,7 @@ class EvaluationContext
                 $variant = new FeatureValue();
                 $variant->value = $jsonVariant->value;
                 $variant->weight = $jsonVariant->weight;
+                $variant->priority = $jsonVariant->priority;
                 $feature->variants[] = $variant;
             }
 

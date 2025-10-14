@@ -9,4 +9,7 @@ class FeatureValue
 
     /** @var float */
     public $weight;
+
+    /** @var int */
+    public $priority;
 }
