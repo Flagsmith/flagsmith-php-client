@@ -70,15 +70,58 @@ class MappersTest extends TestCase
         $this->assertEquals(-INF, $context->segments[$overrideKey]->overrides[0]->priority);
         $this->assertNull($context->segments[$overrideKey]->overrides[0]->variants);
 
-        $this->assertCount(1, $context->features);
+        $this->assertCount(3, $context->features);
         $this->assertArrayHasKey('some_feature', $context->features);
-        $this->assertEquals('40eb539d-3713-4720-bbd4-829dbef10d51', $context->features['some_feature']->key);
+        $this->assertEquals('00000000-0000-0000-0000-000000000000', $context->features['some_feature']->key);
         $this->assertEquals('1', $context->features['some_feature']->feature_key);
         $this->assertEquals('some_feature', $context->features['some_feature']->name);
         $this->assertTrue($context->features['some_feature']->enabled);
         $this->assertEquals('some-value', $context->features['some_feature']->value);
         $this->assertNull($context->features['some_feature']->priority);
         $this->assertEmpty($context->features['some_feature']->variants);
+
+        // Test multivariate feature with IDs - priority should be based on ID
+        $this->assertArrayHasKey('mv_feature_with_ids', $context->features);
+        $mvFeatureWithIds = $context->features['mv_feature_with_ids'];
+        $this->assertEquals('2', $mvFeatureWithIds->key);
+        $this->assertEquals('2', $mvFeatureWithIds->feature_key);
+        $this->assertEquals('mv_feature_with_ids', $mvFeatureWithIds->name);
+        $this->assertTrue($mvFeatureWithIds->enabled);
+        $this->assertEquals('default_value', $mvFeatureWithIds->value);
+        $this->assertNull($mvFeatureWithIds->priority);
+        $this->assertCount(2, $mvFeatureWithIds->variants);
+
+        // First variant: ID=100, should have priority 100
+        $this->assertEquals('variant_a', $mvFeatureWithIds->variants[0]->value);
+        $this->assertEquals(30.0, $mvFeatureWithIds->variants[0]->weight);
+        $this->assertEquals(100, $mvFeatureWithIds->variants[0]->priority);
+
+        // Second variant: ID=200, should have priority 200
+        $this->assertEquals('variant_b', $mvFeatureWithIds->variants[1]->value);
+        $this->assertEquals(70.0, $mvFeatureWithIds->variants[1]->weight);
+        $this->assertEquals(200, $mvFeatureWithIds->variants[1]->priority);
+
+        // Test multivariate feature without IDs - priority should be based on UUID position
+        $this->assertArrayHasKey('mv_feature_without_ids', $context->features);
+        $mvFeatureWithoutIds = $context->features['mv_feature_without_ids'];
+        $this->assertEquals('3', $mvFeatureWithoutIds->key);
+        $this->assertEquals('3', $mvFeatureWithoutIds->feature_key);
+        $this->assertEquals('mv_feature_without_ids', $mvFeatureWithoutIds->name);
+        $this->assertFalse($mvFeatureWithoutIds->enabled);
+        $this->assertEquals('fallback_value', $mvFeatureWithoutIds->value);
+        $this->assertNull($mvFeatureWithoutIds->priority);
+        $this->assertCount(3, $mvFeatureWithoutIds->variants);
+
+        // Variants should be ordered by UUID alphabetically
+        $this->assertEquals('option_y', $mvFeatureWithoutIds->variants[0]->value);
+        $this->assertEquals(50.0, $mvFeatureWithoutIds->variants[0]->weight);
+        $this->assertEquals(1, $mvFeatureWithoutIds->variants[0]->priority); // Second
+        $this->assertEquals('option_x', $mvFeatureWithoutIds->variants[1]->value);
+        $this->assertEquals(25.0, $mvFeatureWithoutIds->variants[1]->weight);
+        $this->assertEquals(0, $mvFeatureWithoutIds->variants[1]->priority); // First
+        $this->assertEquals('option_z', $mvFeatureWithoutIds->variants[2]->value);
+        $this->assertEquals(25.0, $mvFeatureWithoutIds->variants[2]->weight);
+        $this->assertEquals(2, $mvFeatureWithoutIds->variants[2]->priority); // Third
     }
 
     public function testMapContextAndIdentityToContextProducesEvaluationContextWithIdentity(): void
