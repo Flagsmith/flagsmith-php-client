@@ -117,7 +117,7 @@ class Mappers
             $feature->enabled = $featureState->enabled;
             $feature->value = $featureState->feature_state_value;
             $feature->priority = $featureState->feature_segment?->priority ?? null;
-
+            $feature->metadata = ['flagsmith_id' => $featureState->feature->id];
             $feature->variants = [];
             $multivariateFeatureStateValues = ((array) $featureState->multivariate_feature_state_values) ?? [];
             $multivariateFeatureStateValueUUIDs = array_column($multivariateFeatureStateValues, 'mv_fs_value_uuid');
@@ -187,14 +187,15 @@ class Mappers
 
             $segment->overrides = [];
             foreach (unserialize($serializedOverridesKey) as $overrideKey) {
-                [$featureKey, $featureName, $enabled, $value] = $overrideKey;
+                [$featureId, $featureName, $enabled, $value] = $overrideKey;
                 $feature = new FeatureContext();
                 $feature->key = '';  // Not used in identity overrides
-                $feature->feature_key = $featureKey;
+                $feature->feature_key = (string) $featureId;
                 $feature->name = $featureName;
                 $feature->enabled = $enabled;
                 $feature->value = $value;
                 $feature->priority = Engine::STRONGEST_PRIORITY;
+                $feature->metadata = ['flagsmith_id' => $featureId];
                 $segment->overrides[] = $feature;
             }
 

@@ -109,6 +109,7 @@ class EvaluationContext
             $feature->enabled = $jsonFeature->enabled;
             $feature->value = $jsonFeature->value;
             $feature->priority = $jsonFeature->priority ?? null;
+            $feature->metadata = (array) ($jsonFeature->metadata ?? []);
             $feature->variants = [];
             foreach ($jsonFeature->variants ?? [] as $jsonVariant) {
                 $variant = new FeatureValue();

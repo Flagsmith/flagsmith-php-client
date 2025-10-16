@@ -96,7 +96,7 @@ class Flags
         foreach ($evaluationResult->flags as $flagResult) {
             $flag = new Flag();
             $flag->feature_name = $flagResult->name;
-            $flag->feature_id = (int) $flagResult->feature_key;
+            $flag->feature_id = $flagResult->metadata['flagsmith_id'];
             $flag->enabled = $flagResult->enabled;
             $flag->value = $flagResult->value;
             $flags[$flagResult->name] = $flag;

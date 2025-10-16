@@ -57,7 +57,7 @@ class Engine
             $segmentResult = new SegmentResult();
             $segmentResult->key = $segment->key;
             $segmentResult->name = $segment->name;
-            $segmentResult->metadata = $segment->metadata ?? null;
+            $segmentResult->metadata = $segment->metadata;
             $evaluatedSegments[] = $segmentResult;
 
             foreach ($segment->overrides as $overrideFeature) {
@@ -152,6 +152,7 @@ class Engine
                     $flag->enabled = $feature->enabled;
                     $flag->value = $variant->value;
                     $flag->reason = "SPLIT; weight={$variant->weight}";
+                    $flag->metadata = $feature->metadata;
                     return $flag;
                 }
                 $startPercentage = $limit;
@@ -164,6 +165,7 @@ class Engine
         $flag->enabled = $feature->enabled;
         $flag->value = $feature->value;
         $flag->reason = 'DEFAULT';
+        $flag->metadata = $feature->metadata;
         return $flag;
     }
 
@@ -180,6 +182,7 @@ class Engine
         $flag->enabled = $feature->enabled;
         $flag->value = $feature->value;
         $flag->reason = "TARGETING_MATCH; segment={$segment->name}";
+        $flag->metadata = $feature->metadata;
         return $flag;
     }
 
