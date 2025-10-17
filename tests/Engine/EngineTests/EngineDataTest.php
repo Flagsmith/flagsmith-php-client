@@ -1,69 +1,45 @@
 <?php
 
+namespace FlagsmithTest\Engine\EngineTests;
+
 use Flagsmith\Engine\Engine;
-use Flagsmith\Engine\Environments\EnvironmentModel;
-use Flagsmith\Engine\Identities\IdentityModel;
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use PHPUnit\Framework\TestCase;
 
 class EngineDataTest extends TestCase
 {
     private int $attempt = 0;
-    public function extractTestCases()
+
+    /** @return \Generator<string, array<array<string, mixed>>> */
+    public function extractTestCases(): \Generator
     {
-        $fileContents = file_get_contents(__DIR__ . '/EngineTestData/data/environment_n9fbf9h3v4fFgH3U3ngWhb.json');
+        $testCasePaths = glob(__DIR__ . '/EngineTestData/test_cases/test_*.{json,jsonc}', \GLOB_BRACE);
+        foreach ($testCasePaths as $testCasePath) {
+            $testCaseJson = file_get_contents($testCasePath);
+            $testCase = json5_decode($testCaseJson);
 
-        $contents = json_decode($fileContents);
-
-        $environmentModel = EnvironmentModel::build($contents->environment);
-
-        $parameters = [];
-        foreach ($contents->identities_and_responses as $testCase) {
-            $parameters[] = [
-                $environmentModel,
-                IdentityModel::build($testCase->identity),
-                $testCase->response
-            ];
+            $testName = basename($testCasePath);
+            yield $testName => [[
+                'context' => EvaluationContext::fromJsonObject($testCase->context),
+                'result' => $testCase->result,
+            ]];
         }
-
-        return $parameters;
     }
 
     /**
      * @dataProvider extractTestCases
+     * @param array<string, mixed> $case
+     * @return void
      */
-    public function testEngine($environmentModel, $identityModel, $expectedResponse)
+    public function testEngine($case): void
     {
-        $this->attempt++;
-        $engineResponse = Engine::getIdentityFeatureStates($environmentModel, $identityModel);
+        // When
+        $result = Engine::getEvaluationResult($case['context']);
 
-        usort(
-            $engineResponse,
-            fn ($fs1, $fs2) => $fs1->getFeature()->getName() <=> $fs2->getFeature()->getName()
-        );
-
-        $flags = $expectedResponse->flags;
-        usort(
-            $flags,
-            fn ($fs1, $fs2) => $fs1->feature->name <=> $fs2->feature->name
-        );
-
+        // Then
         $this->assertEquals(
-            count($flags),
-            count($engineResponse)
+            json_decode(json_encode($case['result']), associative: true),
+            json_decode(json_encode($result), associative: true),
         );
-
-        foreach ($engineResponse as $index => $featureState) {
-            $val = $featureState->getValue($identityModel->getDjangoId());
-            $expectedVal = $flags[$index]->feature_state_value;
-
-            $this->assertEquals(
-                $val,
-                $expectedVal
-            );
-            $this->assertEquals(
-                count($flags),
-                count($engineResponse)
-            );
-        }
     }
 }
