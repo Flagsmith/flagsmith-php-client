@@ -306,12 +306,13 @@ class FlagsmithClientTest extends TestCase
     public function testGetIdentitySegmentsWithValidTrait()
     {
         foreach (ClientFixtures::localEvalFlagsmith() as $flagsmith) {
-            $identifier = 'identifier';
-            $traits = (object)['foo' => 'bar'];
+            $identifier = 'overridden-id';  // Creates a virtual segment for the identity override
+            $traits = (object)['foo' => 'bar'];  // Matches the segment
 
             $segments = $flagsmith->getIdentitySegments($identifier, $traits);
             $this->assertEquals(count($segments), 1);
             $this->assertEquals($segments[0]->getName(), 'Test segment');
+            $this->assertSame(1, $segments[0]->id);
         }
     }
 
