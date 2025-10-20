@@ -67,6 +67,7 @@ class AnalyticsProcessor
             ->withHeader('Accept', 'application/json')
             ->withHeader('Content-Type', 'application/json')
             ->withHeader('X-Environment-Key', $this->environment_key)
+            ->withHeader('User-Agent', UserAgent::get())
             ->withBody($stream);
 
         try {
