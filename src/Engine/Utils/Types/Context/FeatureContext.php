@@ -24,4 +24,7 @@ class FeatureContext
 
     /** @var array<FeatureValue> */
     public $variants;
+
+    /** @var ?array<string,mixed> */
+    public $metadata;
 }

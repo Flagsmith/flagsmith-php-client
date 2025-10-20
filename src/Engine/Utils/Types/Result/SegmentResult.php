@@ -15,14 +15,11 @@ class SegmentResult implements \JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $data = [
-            'key' => $this->key,
-            'name' => $this->name,
-        ];
+        $data = get_object_vars($this);
 
         // 'metadata' is only added if there is any
-        if (!empty($this->metadata)) {
-            $data['metadata'] = $this->metadata;
+        if (empty($this->metadata)) {
+            unset($data['metadata']);
         }
 
         return $data;

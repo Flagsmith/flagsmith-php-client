@@ -36,7 +36,7 @@ class EvaluationContext
         }
 
         $context->segments = [];
-        foreach ($jsonContext->segments as $jsonSegment) {
+        foreach (($jsonContext->segments ?? []) as $jsonSegment) {
             $segment = new SegmentContext();
             $segment->key = $jsonSegment->key;
             $segment->name = $jsonSegment->name;
@@ -52,6 +52,15 @@ class EvaluationContext
     }
 
     /**
+     * Deep clone the EvaluationContext
+     * @return EvaluationContext
+     */
+    public function deepClone(): self
+    {
+        return EvaluationContext::fromJsonObject($this);
+    }
+
+    /**
      * @param array<object> $jsonRules
      * @return array<SegmentRule>
      */
@@ -60,15 +69,17 @@ class EvaluationContext
         $rules = [];
         foreach ($jsonRules as $jsonRule) {
             $rule = new SegmentRule();
-            $rule->type = SegmentRuleType::from($jsonRule->type);
+            $rule->type = $jsonRule->type instanceof SegmentRuleType
+                ? $jsonRule->type
+                : SegmentRuleType::from($jsonRule->type);
 
             $rule->conditions = [];
             foreach ($jsonRule->conditions ?? [] as $jsonCondition) {
                 $condition = new SegmentCondition();
                 $condition->property = $jsonCondition->property;
-                $condition->operator = SegmentConditionOperator::from(
-                    $jsonCondition->operator,
-                );
+                $condition->operator = $jsonCondition->operator instanceof SegmentConditionOperator
+                    ? $jsonCondition->operator
+                    : SegmentConditionOperator::from($jsonCondition->operator);
                 $condition->value = $jsonCondition->value;
                 $rule->conditions[] = $condition;
             }
@@ -93,11 +104,12 @@ class EvaluationContext
         foreach ($jsonFeatures as $jsonFeature) {
             $feature = new FeatureContext();
             $feature->key = $jsonFeature->key;
-            $feature->feature_key = $jsonFeature->feature_key;
+            $feature->feature_key = (string) $jsonFeature->feature_key;
             $feature->name = $jsonFeature->name;
             $feature->enabled = $jsonFeature->enabled;
             $feature->value = $jsonFeature->value;
             $feature->priority = $jsonFeature->priority ?? null;
+            $feature->metadata = (array) ($jsonFeature->metadata ?? []);
             $feature->variants = [];
             foreach ($jsonFeature->variants ?? [] as $jsonVariant) {
                 $variant = new FeatureValue();

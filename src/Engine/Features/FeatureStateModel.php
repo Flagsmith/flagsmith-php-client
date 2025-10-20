@@ -17,7 +17,7 @@ class FeatureStateModel
 
     public FeatureModel $feature;
     public bool $enabled;
-    private $_value;
+    public mixed $feature_state_value;
     public string $featurestate_uuid;
     public MultivariateFeatureStateValueModelList $multivariate_feature_state_values;
     public ?int $django_id = null;
@@ -157,7 +157,7 @@ class FeatureStateModel
         if ($identityId && count($this->multivariate_feature_state_values) > 0) {
             return $this->getMultivariateValue($identityId);
         }
-        return $this->_value;
+        return $this->feature_state_value;
     }
 
     /**
@@ -207,7 +207,7 @@ class FeatureStateModel
             $startPercentage = $limit;
         }
 
-        return $this->_value;
+        return $this->feature_state_value;
     }
 
     /**
@@ -217,7 +217,7 @@ class FeatureStateModel
      */
     public function setValue($value)
     {
-        $this->_value = $value;
+        $this->feature_state_value = $value;
     }
 
 
@@ -232,7 +232,7 @@ class FeatureStateModel
         unset($values->feature_state_value);
         $this->setValuesSerializer($values);
         if (!empty($featureStateValue)) {
-            $this->_value = $featureStateValue;
+            $this->feature_state_value = $featureStateValue;
         }
     }
 

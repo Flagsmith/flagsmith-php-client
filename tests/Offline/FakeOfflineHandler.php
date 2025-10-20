@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace FlagsmithTest\Offline;
 
-use Flagsmith\Engine\Environments\EnvironmentModel;
-use Flagsmith\Offline\IOfflineHandler;
-use FlagsmithTest\ClientFixtures;
+use Flagsmith\Offline\LocalFileHandler;
 
-class FakeOfflineHandler implements IOfflineHandler
+class FakeOfflineHandler extends LocalFileHandler
 {
-    public function getEnvironment(): ?EnvironmentModel
+    public function __construct()
     {
-        return ClientFixtures::getEnvironmentModel();
+        $this->filePath = __DIR__ . '/../Data/environment.json';
     }
 }

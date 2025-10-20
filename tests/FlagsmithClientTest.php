@@ -1,5 +1,6 @@
 <?php
 
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
@@ -11,43 +12,49 @@ use Psr\Http\Message\StreamFactoryInterface;
 
 class FlagsmithClientTest extends TestCase
 {
-    public function testUpdateEnvironmentSetsEnvironment()
+    public function testUpdateEnvironmentSetsLocalEvaluationContext(): void
     {
-        $flagsmith = (new Flagsmith('ser.abcdefg', Flagsmith::DEFAULT_API_URL, null, 10))
-            ->withClient(ClientFixtures::getMockClient());
+        // Given
+        $flagsmith = new Flagsmith('ser.api_key', environmentTtl: 1);
+        $flagsmith->withClient(ClientFixtures::getMockClient());
 
+        // When
         $flagsmith->updateEnvironment();
 
-        $this->assertNotNull($flagsmith->getEnvironment());
-        $this->assertEquals($flagsmith->getEnvironment(), ClientFixtures::getEnvironmentModel());
+        // Then
+        $context = $flagsmith->getLocalEvaluationContext();
+        $this->assertInstanceOf(EvaluationContext::class, $context);
+        $this->assertEquals('Test environment', $context->environment->name);
     }
 
-    public function testGetEnvironmentFlagsCallsApiWhenNoLocalEnvironment()
+    public function testGetEnvironmentFlagsCallsApiWhenLocalEvaluationDisabled(): void
     {
-        $flagsmith = (new Flagsmith('api_key'))
-            ->withClient(ClientFixtures::getMockClient());
+        // Given
+        $flagsmith = new Flagsmith('api_key');
+        $flagsmith->withClient(ClientFixtures::getMockClient());
 
+        // When
         $allFlags = $flagsmith->getEnvironmentFlags()->allFlags();
 
+        // Then
         $this->assertTrue($allFlags[0]->enabled);
         $this->assertEquals($allFlags[0]->value, 'some-value');
         $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
     }
 
-    public function testGetEnvironmentFlagsUsesLocalEnvironmentWhenAvailable()
+    public function testGetEnvironmentFlagsUsesLocalContextWhenLocalEvaluationEnabled(): void
     {
-        $flagsmith = (new Flagsmith('api_key'))
-            ->withClient(ClientFixtures::getMockClient());
+        // Given
+        $flagsmith = new Flagsmith('ser.api_key', environmentTtl: 1);
+        $flagsmith->withClient(ClientFixtures::getMockClient());
 
-        $flagsmith->updateEnvironment();
-
+        // When
         $allFlags = $flagsmith->getEnvironmentFlags()->allFlags();
-        $environmentModel = ClientFixtures::getEnvironmentModel();
-        $firstFeatureState = $environmentModel->getFeatureStates()[0];
 
-        $this->assertEquals($allFlags[0]->feature_name, $firstFeatureState->getFeature()->getName());
-        $this->assertEquals($allFlags[0]->enabled, $firstFeatureState->getEnabled());
-        $this->assertEquals($allFlags[0]->value, $firstFeatureState->getValue());
+        // Then
+        $this->assertTrue($allFlags[0]->enabled);
+        $this->assertEquals($allFlags[0]->value, 'some-value');
+        $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
     }
 
     public function testGetIdentityFlagsCallsApiWhenNoLocalEnvironmentNoTraits()
@@ -299,12 +306,13 @@ class FlagsmithClientTest extends TestCase
     public function testGetIdentitySegmentsWithValidTrait()
     {
         foreach (ClientFixtures::localEvalFlagsmith() as $flagsmith) {
-            $identifier = 'identifier';
-            $traits = (object)['foo' => 'bar'];
+            $identifier = 'overridden-id';  // Creates a virtual segment for the identity override
+            $traits = (object)['foo' => 'bar'];  // Matches the segment
 
             $segments = $flagsmith->getIdentitySegments($identifier, $traits);
             $this->assertEquals(count($segments), 1);
             $this->assertEquals($segments[0]->getName(), 'Test segment');
+            $this->assertSame(1, $segments[0]->id);
         }
     }
 

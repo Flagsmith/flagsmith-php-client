@@ -4,12 +4,10 @@ namespace Flagsmith;
 
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Engine\Engine;
-use Flagsmith\Engine\Environments\EnvironmentModel;
 use Flagsmith\Engine\Identities\IdentityModel;
 use Flagsmith\Engine\Identities\Traits\TraitModel;
-use Flagsmith\Engine\Segments\SegmentEvaluator;
-use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
+use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Exceptions\FlagsmithThrowable;
@@ -18,6 +16,7 @@ use Flagsmith\Models\Segment;
 use Flagsmith\Offline\IOfflineHandler;
 use Flagsmith\Utils\AnalyticsProcessor;
 use Flagsmith\Utils\IdentitiesGenerator;
+use Flagsmith\Utils\Mappers;
 use Flagsmith\Utils\Retry;
 use JsonException;
 use ValueError;
@@ -52,7 +51,7 @@ class Flagsmith
     private bool $skipCache = false;
     private bool $useCacheAsFailover = false;
     private array $headers = [];
-    private ?EnvironmentModel $environment = null;
+    private ?EvaluationContext $localEvaluationContext = null;
     private bool $offlineMode = false;
     private ?IOfflineHandler $offlineHandler = null;
 
@@ -78,19 +77,13 @@ class Flagsmith
             throw new ValueError('Cannot use both defaultFlagHandler and offlineHandler.');
         }
 
-        if (is_int($environmentTtl)) {
-            if (stripos($apiKey, 'ser.') === false) {
-                throw new ValueError(
-                    'In order to use local evaluation, please generate a server key in the environment settings page.'
-                );
-            }
-        }
-
         $this->offlineMode = $offlineMode;
         $this->offlineHandler = $offlineHandler;
 
+        // The offline handler can be used as backup if online but the request fails
         if (!is_null($offlineHandler)) {
-            $this->environment = $offlineHandler->getEnvironment();
+            $environment = $offlineHandler->getEnvironment();
+            $this->localEvaluationContext = Mappers::mapEnvironmentDocumentToContext($environment);
         }
 
         if (!$offlineMode) {
@@ -111,6 +104,12 @@ class Flagsmith
             $this->client = Psr18ClientDiscovery::find();
             $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
             $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
+
+            if ($this->enableLocalEvaluation && !str_starts_with($this->apiKey, 'ser.')) {
+                throw new ValueError(
+                    'In order to use local evaluation, please generate a server key in the environment settings page.'
+                );
+            }
         }
     }
 
@@ -139,8 +138,9 @@ class Flagsmith
      * @param int $environmentTtl
      * @return Flagsmith
      */
-    public function withEnvironmentTtl(int $environmentTtl): self
+    public function withEnvironmentTtl(?int $environmentTtl): self
     {
+        $this->enableLocalEvaluation = $environmentTtl != null;
         return $this->with('environmentTtl', $environmentTtl);
     }
 
@@ -295,12 +295,12 @@ class Flagsmith
     }
 
     /**
-     * Get the environment model.
-     * @return EnvironmentModel|null
+     * Return the local evaluation context, if any
+     * @return ?EvaluationContext
      */
-    public function getEnvironment(): ?EnvironmentModel
+    public function getLocalEvaluationContext(): ?EvaluationContext
     {
-        return $this->environment;
+        return $this->localEvaluationContext;
     }
 
     /**
@@ -311,8 +311,8 @@ class Flagsmith
      */
     public function getEnvironmentFlags(): Flags
     {
-        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->environment) {
-            return $this->getEnvironmentFlagsFromDocument();
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->localEvaluationContext) {
+            return $this->getEnvironmentFlagsFromLocalEvaluationContext();
         }
 
         return $this->getEnvironmentFlagsFromApi();
@@ -337,8 +337,8 @@ class Flagsmith
     public function getIdentityFlags(string $identifier, ?object $traits = null, ?bool $transient = false): Flags
     {
         $traits = $traits ?? (object)[];
-        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->environment) {
-            return $this->getIdentityFlagsFromDocument($identifier, $traits);
+        if (($this->offlineMode || $this->enableLocalEvaluation) && $this->localEvaluationContext) {
+            return $this->getIdentityFlagsFromLocalEvaluationContext($identifier, $traits);
         }
 
         return $this->getIdentityFlagsFromApi($identifier, $traits, $transient);
@@ -350,61 +350,78 @@ class Flagsmith
      *      environment , e.g. email address, username, uuid
      * @param object|null $traits a dictionary of traits to add / update on the identity in
      *      Flagsmith, e.g. {"num_orders": 10}
-     * @return array
+     * @return array<Segment>
      *
      * @throws FlagsmithThrowable
      */
     public function getIdentitySegments(string $identifier, ?object $traits = null): array
     {
-        if (empty($this->environment)) {
+        if ($this->localEvaluationContext === null) {
             throw new FlagsmithClientError('Local evaluation required to obtain identity segments.');
         }
 
-        $traits = $traits ?? (object)[];
-        $identityModel = $this->getIdentityModel($identifier, $traits);
-        $segmentModels = SegmentEvaluator::getIdentitySegments($this->environment, $identityModel);
+        $context = Mappers::mapContextAndIdentityToContext(
+            context: $this->localEvaluationContext,
+            identifier: $identifier,
+            traits: $traits,
+        );
 
-        return array_map(fn ($segment) => (new Segment())
-            ->withId($segment->getId())
-            ->withName($segment->getName()), $segmentModels);
+        $evaluationResult = Engine::getEvaluationResult($context);
+
+        $segments = [];
+        foreach ($evaluationResult->segments as $resultSegment) {
+            if (($resultSegment->metadata['flagsmith_id'] ?? null) === null) {
+                continue;  // Not a real segment, e.g. an identity override virtual segment
+            }
+
+            $segment = new Segment();
+            $segment->id = $resultSegment->metadata['flagsmith_id'];
+            $segment->name = $resultSegment->name;
+            $segments[] = $segment;
+        }
+
+        return $segments;
     }
 
     /**
-     * Externalised method to update the environement cache.
+     * Download and convert the Environment Document into an Evaluation Context
      * @return void
      *
      * @throws FlagsmithThrowable
      */
-    public function updateEnvironment()
+    public function updateEnvironment(): void
     {
-        if (is_int($this->environmentTtl)) {
-            $this->environment = $this->getEnvironmentFromApi();
+        if (!$this->enableLocalEvaluation) {
+            return;
         }
-    }
 
-    /**
-     * Get the environment API.
-     * @return EnvironmentModel
-     *
-     * @throws FlagsmithAPIError
-     */
-    private function getEnvironmentFromApi(): EnvironmentModel
-    {
-        $environmentDict = $this->cachedCall('Environment', 'GET', $this->environment_url, [], false, $this->environmentTtl);
+        $environmentData = $this->cachedCall(
+            cacheKey: 'Environment',
+            method: 'GET',
+            uri: $this->environment_url,
+            ttl: $this->environmentTtl,
+        );
 
-        return EnvironmentModel::build($environmentDict);
+        $context = Mappers::mapEnvironmentDocumentToContext($environmentData);
+        $this->localEvaluationContext = $context;
     }
 
     /**
      * Get the environment flags from document.
      * @return Flags
      */
-    private function getEnvironmentFlagsFromDocument(): Flags
+    private function getEnvironmentFlagsFromLocalEvaluationContext(): Flags
     {
-        return Flags::fromFeatureStateModels(
-            new FeatureStateModelList(Engine::getEnvironmentFeatureStates($this->environment)),
-            $this->analyticsProcessor,
-            $this->defaultFlagHandler
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('Evaluation context is not present');
+        }
+
+        $evaluationResult = Engine::getEvaluationResult($this->localEvaluationContext);
+
+        return Flags::fromEvaluationResult(
+            $evaluationResult,
+            analyticsProcessor: $this->analyticsProcessor,
+            defaultFlagHandler: $this->defaultFlagHandler,
         );
     }
 
@@ -416,16 +433,24 @@ class Flagsmith
      *
      * @throws FlagsmithClientError
      */
-    private function getIdentityFlagsFromDocument(string $identifier, object $traits): Flags
+    private function getIdentityFlagsFromLocalEvaluationContext(string $identifier, object $traits): Flags
     {
-        $identityModel = $this->getIdentityModel($identifier, $traits);
-        $featureStates = Engine::getIdentityFeatureStates($this->environment, $identityModel);
+        if ($this->localEvaluationContext === null) {
+            throw new FlagsmithClientError('Evaluation context is not present');
+        }
 
-        return Flags::fromFeatureStateModels(
-            new FeatureStateModelList($featureStates),
-            $this->analyticsProcessor,
-            $this->defaultFlagHandler,
-            $identityModel->compositeKey(),
+        $context = Mappers::mapContextAndIdentityToContext(
+            context: $this->localEvaluationContext,
+            identifier: $identifier,
+            traits: $traits,
+        );
+
+        $evaluationResult = Engine::getEvaluationResult($context);
+
+        return Flags::fromEvaluationResult(
+            $evaluationResult,
+            analyticsProcessor: $this->analyticsProcessor,
+            defaultFlagHandler: $this->defaultFlagHandler,
         );
     }
 
@@ -446,7 +471,7 @@ class Flagsmith
             );
         } catch (FlagsmithAPIError $e) {
             if (isset($this->offlineHandler)) {
-                return $this->getEnvironmentFlagsFromDocument();
+                return $this->getEnvironmentFlagsFromLocalEvaluationContext();
             }
             if (isset($this->defaultFlagHandler)) {
                 return (new Flags())
@@ -482,7 +507,7 @@ class Flagsmith
             );
         } catch (FlagsmithAPIError $e) {
             if (isset($this->offlineHandler)) {
-                return $this->getIdentityFlagsFromDocument($identifier, $traits);
+                return $this->getIdentityFlagsFromLocalEvaluationContext($identifier, $traits);
             }
             if (isset($this->defaultFlagHandler)) {
                 return (new Flags())
