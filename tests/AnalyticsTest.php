@@ -30,14 +30,27 @@ class AnalyticsTest extends TestCase
 
     public function testAnalyticsProcessorFlushPostRequestDataMatchAnanlyticsData()
     {
+        $capturedRequest = null;
         $client = $this->createMock(ClientInterface::class);
 
         $analyticsProcessor = ClientFixtures::analyticsProcessor($client);
         $client->expects($this->once())
-            ->method('sendRequest');
+            ->method('sendRequest')
+            ->with($this->callback(function ($request) use (&$capturedRequest) {
+                $capturedRequest = $request;
+                return true;
+            }));
 
         $analyticsProcessor->trackFeature('my_feature');
         $analyticsProcessor->flush();
+
+        $this->assertNotNull($capturedRequest);
+        $this->assertTrue($capturedRequest->hasHeader('User-Agent'));
+        $userAgent = $capturedRequest->getHeaderLine('User-Agent');
+        $composerData = json_decode(file_get_contents(__DIR__ . '/../composer.json'), true);
+        $expectedVersion = $composerData['version'] ?? 'unknown';
+        $expectedUserAgent = "flagsmith-php-sdk/{$expectedVersion}";
+        $this->assertEquals($expectedUserAgent, $userAgent);
     }
 
     public function testAnalyticsProcessorFlushEarlyExitIfAnalyticsDataIsEmpty()

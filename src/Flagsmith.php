@@ -18,6 +18,7 @@ use Flagsmith\Utils\AnalyticsProcessor;
 use Flagsmith\Utils\IdentitiesGenerator;
 use Flagsmith\Utils\Mappers;
 use Flagsmith\Utils\Retry;
+use Flagsmith\Utils\UserAgent;
 use JsonException;
 use ValueError;
 use Psr\Http\Client\ClientInterface;
@@ -621,7 +622,8 @@ class Flagsmith
             ->createRequest($method, rtrim($this->host, '/') . '/' . $uri)
             ->withHeader('Accept', 'application/json')
             ->withHeader('Content-Type', 'application/json')
-            ->withHeader('X-Environment-Key', $this->apiKey);
+            ->withHeader('X-Environment-Key', $this->apiKey)
+            ->withHeader('User-Agent', UserAgent::get());
 
         if (!empty($this->customHeaders)) {
             foreach ($this->customHeaders as $name => $value) {

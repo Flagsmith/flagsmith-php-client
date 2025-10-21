@@ -8,6 +8,7 @@ use FlagsmithTest\ClientFixtures;
 use FlagsmithTest\Offline\FakeOfflineHandler;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 
 class FlagsmithClientTest extends TestCase
@@ -448,5 +449,33 @@ class FlagsmithClientTest extends TestCase
 
         $this->assertEquals($identityFlags->getFlag('some_feature')->enabled, true);
         $this->assertEquals($identityFlags->getFlag('some_feature')->value, 'some-value');
+    }
+
+    public function testApiRequestsIncludeUserAgentHeader()
+    {
+        $capturedRequest = null;
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('sendRequest')
+            ->with($this->callback(function ($request) use (&$capturedRequest) {
+                $capturedRequest = $request;
+                return true;
+            }))
+            ->willReturn(
+                new Response(200, ['Content-Type' => 'application/json'], file_get_contents(__DIR__ . '/Data/flags.json'))
+            );
+
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withClient($mockClient);
+
+        $flagsmith->getEnvironmentFlags();
+
+        $this->assertNotNull($capturedRequest);
+        $this->assertTrue($capturedRequest->hasHeader('User-Agent'));
+        $userAgent = $capturedRequest->getHeaderLine('User-Agent');
+        $composerData = json_decode(file_get_contents(__DIR__ . '/../composer.json'), true);
+        $expectedVersion = $composerData['version'] ?? 'unknown';
+        $expectedUserAgent = "flagsmith-php-sdk/{$expectedVersion}";
+        $this->assertEquals($expectedUserAgent, $userAgent);
     }
 }
