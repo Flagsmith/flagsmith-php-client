@@ -104,7 +104,6 @@ class Engine
     /**
      * Enrich the evaluation context with derived values:
      * - `$.identity.key` if missing
-     * 
      * @param EvaluationContext $context
      * @return void
      */
