@@ -64,7 +64,6 @@ class Mappers
     {
         $identity = new IdentityContext();
         $identity->identifier = $identifier;
-        $identity->key = "{$context->environment->key}_{$identifier}";
         $identity->traits = (array) $traits;
 
         $context = $context->deepClone();
@@ -112,7 +111,6 @@ class Mappers
         foreach ($featureStates as $featureState) {
             $feature = new FeatureContext();
             $feature->key = (string) ($featureState->django_id ?? $featureState->featurestate_uuid);
-            $feature->feature_key = (string) $featureState->feature->id;
             $feature->name = $featureState->feature->name;
             $feature->enabled = $featureState->enabled;
             $feature->value = $featureState->feature_state_value;
@@ -190,7 +188,6 @@ class Mappers
                 [$featureId, $featureName, $enabled, $value] = $overrideKey;
                 $feature = new FeatureContext();
                 $feature->key = '';  // Not used in identity overrides
-                $feature->feature_key = (string) $featureId;
                 $feature->name = $featureName;
                 $feature->enabled = $enabled;
                 $feature->value = $value;

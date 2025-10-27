@@ -63,7 +63,6 @@ class MappersTest extends TestCase
         $this->assertEquals(['overridden-id'], $context->segments[$overrideKey]->rules[0]->conditions[0]->value);
 
         $this->assertEquals('', $context->segments[$overrideKey]->overrides[0]->key);
-        $this->assertEquals(1, $context->segments[$overrideKey]->overrides[0]->feature_key);
         $this->assertEquals('some_feature', $context->segments[$overrideKey]->overrides[0]->name);
         $this->assertFalse($context->segments[$overrideKey]->overrides[0]->enabled);
         $this->assertEquals('some-overridden-value', $context->segments[$overrideKey]->overrides[0]->value);
@@ -74,7 +73,6 @@ class MappersTest extends TestCase
         $this->assertCount(3, $context->features);
         $this->assertArrayHasKey('some_feature', $context->features);
         $this->assertEquals('00000000-0000-0000-0000-000000000000', $context->features['some_feature']->key);
-        $this->assertEquals('1', $context->features['some_feature']->feature_key);
         $this->assertEquals('some_feature', $context->features['some_feature']->name);
         $this->assertTrue($context->features['some_feature']->enabled);
         $this->assertEquals('some-value', $context->features['some_feature']->value);
@@ -86,7 +84,6 @@ class MappersTest extends TestCase
         $this->assertArrayHasKey('mv_feature_with_ids', $context->features);
         $mvFeatureWithIds = $context->features['mv_feature_with_ids'];
         $this->assertEquals('2', $mvFeatureWithIds->key);
-        $this->assertEquals('2', $mvFeatureWithIds->feature_key);
         $this->assertEquals('mv_feature_with_ids', $mvFeatureWithIds->name);
         $this->assertTrue($mvFeatureWithIds->enabled);
         $this->assertEquals('default_value', $mvFeatureWithIds->value);
@@ -108,7 +105,6 @@ class MappersTest extends TestCase
         $this->assertArrayHasKey('mv_feature_without_ids', $context->features);
         $mvFeatureWithoutIds = $context->features['mv_feature_without_ids'];
         $this->assertEquals('3', $mvFeatureWithoutIds->key);
-        $this->assertEquals('3', $mvFeatureWithoutIds->feature_key);
         $this->assertEquals('mv_feature_without_ids', $mvFeatureWithoutIds->name);
         $this->assertFalse($mvFeatureWithoutIds->enabled);
         $this->assertEquals('fallback_value', $mvFeatureWithoutIds->value);
@@ -126,33 +122,5 @@ class MappersTest extends TestCase
         $this->assertEquals('option_z', $mvFeatureWithoutIds->variants[2]->value);
         $this->assertEquals(25.0, $mvFeatureWithoutIds->variants[2]->weight);
         $this->assertEquals(2, $mvFeatureWithoutIds->variants[2]->priority); // Third
-    }
-
-    public function testMapContextAndIdentityToContextProducesEvaluationContextWithIdentity(): void
-    {
-        // Given
-        $originalContext = new EvaluationContext();
-        $originalContext->environment = new EnvironmentContext();
-        $originalContext->environment->key = 'public-env-key';
-
-        // When
-        $context = Mappers::mapContextAndIdentityToContext(
-            context: $originalContext,
-            identifier: 'neo',
-            traits: (object) [
-                'chosen-pill' => 'red',
-                'has-met-the-oracle' => true,
-            ],
-        );
-
-        // Then
-        $this->assertInstanceOf(EvaluationContext::class, $context);
-        $this->assertNotSame($originalContext, $context);
-        $this->assertEquals('public-env-key', $context->environment->key);
-        $this->assertEquals('neo', $context->identity->identifier);
-        $this->assertEquals('public-env-key_neo', $context->identity->key);
-        $this->assertCount(2, $context->identity->traits);
-        $this->assertEquals('red', $context->identity->traits['chosen-pill']);
-        $this->assertTrue($context->identity->traits['has-met-the-oracle']);
     }
 }
