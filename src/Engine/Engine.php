@@ -288,7 +288,8 @@ class Engine
                         $inValues = explode(',', $condition->value);
                     }
                 }
-                $inValues = array_map($cast, $inValues);
+                $contextValue = strval($contextValue);
+                $inValues = array_map('strval', $inValues);
                 return in_array($contextValue, $inValues, strict: true);
 
             case SegmentConditionOperator::PERCENTAGE_SPLIT:
