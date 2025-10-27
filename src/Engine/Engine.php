@@ -270,7 +270,7 @@ class Engine
 
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
-                if ($contextValue === null) {
+                if ($contextValue === null || gettype($contextValue) === 'boolean') {
                     return false;
                 }
                 if (is_array($condition->value)) {
