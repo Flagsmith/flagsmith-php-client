@@ -8,9 +8,6 @@ class FeatureContext
     public $key;
 
     /** @var string */
-    public $feature_key;
-
-    /** @var string */
     public $name;
 
     /** @var bool */

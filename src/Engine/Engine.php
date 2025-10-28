@@ -44,10 +44,12 @@ class Engine
         $evaluatedFeatures = [];
 
         /** @var array<string, SegmentContext> */
-        $matchedSegmentsByFeatureKey = [];
+        $matchedSegmentsByFeatureName = [];
 
         /** @var array<string, FlagResult> */
         $evaluatedFlags = [];
+
+        $context = self::getEnrichedContext($context);
 
         foreach ($context->segments as $segment) {
             if (!self::isContextInSegment($context, $segment)) {
@@ -55,14 +57,13 @@ class Engine
             }
 
             $segmentResult = new SegmentResult();
-            $segmentResult->key = $segment->key;
             $segmentResult->name = $segment->name;
             $segmentResult->metadata = $segment->metadata;
             $evaluatedSegments[] = $segmentResult;
 
             foreach ($segment->overrides as $overrideFeature) {
-                $featureKey = $overrideFeature->feature_key;
-                $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
+                $featureName = $overrideFeature->name;
+                $evaluatedFeature = $evaluatedFeatures[$featureName] ?? null;
                 if ($evaluatedFeature) {
                     $overrideWinsPriority =
                         ($overrideFeature->priority ?? self::WEAKEST_PRIORITY) <
@@ -72,19 +73,18 @@ class Engine
                     }
                 }
 
-                $evaluatedFeatures[$featureKey] = $overrideFeature;
-                $matchedSegmentsByFeatureKey[$featureKey] = $segment;
+                $evaluatedFeatures[$featureName] = $overrideFeature;
+                $matchedSegmentsByFeatureName[$featureName] = $segment;
             }
         }
 
         foreach ($context->features as $feature) {
-            $featureKey = $feature->feature_key;
             $featureName = $feature->name;
-            $evaluatedFeature = $evaluatedFeatures[$featureKey] ?? null;
+            $evaluatedFeature = $evaluatedFeatures[$featureName] ?? null;
             if ($evaluatedFeature) {
                 $evaluatedFlags[$featureName] = self::getFlagResultFromSegmentContext(
                     $evaluatedFeature,
-                    $matchedSegmentsByFeatureKey[$featureKey],
+                    $matchedSegmentsByFeatureName[$featureName],
                 );
                 continue;
             }
@@ -99,6 +99,24 @@ class Engine
         $result->flags = $evaluatedFlags;
         $result->segments = $evaluatedSegments;
         return $result;
+    }
+
+    /**
+     * Get an enriched evaluation context with derived values:
+     * - `$.identity.key` if missing
+     * Returns a cloned context if any enrichment is applied.
+     * Returns the original context if no enrichment is needed.
+     * @param EvaluationContext $context
+     * @return EvaluationContext
+     */
+    private static function getEnrichedContext(EvaluationContext $context): EvaluationContext
+    {
+        if ($context->identity !== null && $context->identity->key === null) {
+            $context = clone $context;
+            $context->identity = clone $context->identity;
+            $context->identity->key = "{$context->environment->key}_{$context->identity->identifier}";
+        }
+        return $context;
     }
 
     /**
@@ -147,7 +165,6 @@ class Engine
                     $percentageValue < $limit
                 ) {
                     $flag = new FlagResult();
-                    $flag->feature_key = $feature->feature_key;
                     $flag->name = $feature->name;
                     $flag->enabled = $feature->enabled;
                     $flag->value = $variant->value;
@@ -160,7 +177,6 @@ class Engine
         }
 
         $flag = new FlagResult();
-        $flag->feature_key = $feature->feature_key;
         $flag->name = $feature->name;
         $flag->enabled = $feature->enabled;
         $flag->value = $feature->value;
@@ -177,7 +193,6 @@ class Engine
     private static function getFlagResultFromSegmentContext($feature, $segment)
     {
         $flag = new FlagResult();
-        $flag->feature_key = $feature->feature_key;
         $flag->name = $feature->name;
         $flag->enabled = $feature->enabled;
         $flag->value = $feature->value;
@@ -259,7 +274,7 @@ class Engine
 
         switch ($condition->operator) {
             case SegmentConditionOperator::IN:
-                if ($contextValue === null) {
+                if ($contextValue === null || gettype($contextValue) === 'boolean') {
                     return false;
                 }
                 if (is_array($condition->value)) {
@@ -278,7 +293,8 @@ class Engine
                         $inValues = explode(',', $condition->value);
                     }
                 }
-                $inValues = array_map($cast, $inValues);
+                $contextValue = strval($contextValue);
+                $inValues = array_map('strval', $inValues);
                 return in_array($contextValue, $inValues, strict: true);
 
             case SegmentConditionOperator::PERCENTAGE_SPLIT:

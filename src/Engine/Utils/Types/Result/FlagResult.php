@@ -5,9 +5,6 @@ namespace Flagsmith\Engine\Utils\Types\Result;
 class FlagResult implements \JsonSerializable
 {
     /** @var string */
-    public $feature_key;
-
-    /** @var string */
     public $name;
 
     /** @var bool */

@@ -5,9 +5,6 @@ namespace Flagsmith\Engine\Utils\Types\Result;
 class SegmentResult implements \JsonSerializable
 {
     /** @var string */
-    public $key;
-
-    /** @var string */
     public $name;
 
     /** @var ?array<string,mixed> */
