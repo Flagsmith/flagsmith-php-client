@@ -49,7 +49,7 @@ class Engine
         /** @var array<string, FlagResult> */
         $evaluatedFlags = [];
 
-        self::enrichContext($context);
+        $context = self::enrichContext($context);
 
         foreach ($context->segments as $segment) {
             if (!self::isContextInSegment($context, $segment)) {
@@ -102,16 +102,21 @@ class Engine
     }
 
     /**
-     * Enrich the evaluation context with derived values:
+     * Get an enriched evaluation context with derived values:
      * - `$.identity.key` if missing
+     * Returns a cloned context if any enrichment is applied.
+     * Returns the original context if no enrichment is needed.
      * @param EvaluationContext $context
-     * @return void
+     * @return EvaluationContext
      */
-    private static function enrichContext(EvaluationContext $context): void
+    private static function enrichContext(EvaluationContext $context): EvaluationContext
     {
         if ($context->identity !== null && $context->identity->key === null) {
+            $context = clone $context;
+            $context->identity = clone $context->identity;
             $context->identity->key = "{$context->environment->key}_{$context->identity->identifier}";
         }
+        return $context;
     }
 
     /**
