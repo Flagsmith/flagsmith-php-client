@@ -37,7 +37,7 @@ class Mappers
             $segment->rules = self::_mapEnvironmentDocumentRulesToContextRules($srcSegment->rules ?? []);
             $segment->metadata = [
                 'source' => 'api',
-                'flagsmith_id' => $srcSegment->id,
+                'id' => $srcSegment->id,
             ];
             $context->segments[$segment->key] = $segment;
 
@@ -115,7 +115,7 @@ class Mappers
             $feature->enabled = $featureState->enabled;
             $feature->value = $featureState->feature_state_value;
             $feature->priority = $featureState->feature_segment?->priority ?? null;
-            $feature->metadata = ['flagsmith_id' => $featureState->feature->id];
+            $feature->metadata = ['id' => $featureState->feature->id];
             $feature->variants = [];
             $multivariateFeatureStateValues = ((array) $featureState->multivariate_feature_state_values) ?? [];
             $multivariateFeatureStateValueUUIDs = array_column($multivariateFeatureStateValues, 'mv_fs_value_uuid');
@@ -196,7 +196,7 @@ class Mappers
                 $feature->enabled = $enabled;
                 $feature->value = $value;
                 $feature->priority = Engine::STRONGEST_PRIORITY;
-                $feature->metadata = ['flagsmith_id' => $featureId];
+                $feature->metadata = ['id' => $featureId];
                 $segment->overrides[] = $feature;
             }
 
