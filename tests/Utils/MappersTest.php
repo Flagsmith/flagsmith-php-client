@@ -47,7 +47,7 @@ class MappersTest extends TestCase
         $this->assertEquals(SegmentConditionOperator::EQUAL, $context->segments[0]->rules[0]->rules[0]->conditions[0]->operator);
         $this->assertEquals('bar', $context->segments[0]->rules[0]->rules[0]->conditions[0]->value);
 
-        $overrideKey = '1dfdec3e4c67121138b1faa01b82f9f731c692842b865f263824bfabf46d5fff';
+        $overrideKey = '2a3691c8a306223592e2e657e50c44cf126db84730e813adea6f951c502b19e8';
         $this->assertArrayHasKey($overrideKey, $context->segments);
         $this->assertEquals('', $context->segments[$overrideKey]->key);
         $this->assertEquals('identity_overrides', $context->segments[$overrideKey]->name);

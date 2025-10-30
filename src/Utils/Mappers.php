@@ -141,6 +141,9 @@ class Mappers
      */
     private static function _mapIdentityOverridesToSegments($identityOverrides)
     {
+        /** @var array<string, int> */
+        $featureIDsByName = [];
+
         /** @var array<string, array<string>> */
         $featuresToIdentifiers = [];
         foreach ($identityOverrides as $identityOverride) {
@@ -154,8 +157,8 @@ class Mappers
             /** @var array<array<mixed>> */
             $overridesKey = [];
             foreach ($identityFeatures as $featureState) {
+                $featureIDsByName[$featureState->feature->name] = $featureState->feature->id;
                 $part = [
-                    $featureState->feature->id,
                     $featureState->feature->name,
                     $featureState->enabled,
                     $featureState->feature_state_value,
@@ -185,7 +188,8 @@ class Mappers
 
             $segment->overrides = [];
             foreach (unserialize($serializedOverridesKey) as $overrideKey) {
-                [$featureId, $featureName, $enabled, $value] = $overrideKey;
+                [$featureName, $enabled, $value] = $overrideKey;
+                $featureId = $featureIDsByName[$featureName];
                 $feature = new FeatureContext();
                 $feature->key = '';  // Not used in identity overrides
                 $feature->name = $featureName;
