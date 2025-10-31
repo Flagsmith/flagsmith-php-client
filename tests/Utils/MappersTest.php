@@ -33,7 +33,7 @@ class MappersTest extends TestCase
         $this->assertCount(1, $context->segments[0]->rules);
         $this->assertEmpty($context->segments[0]->overrides);
         $this->assertEquals('api', $context->segments[0]->metadata['source']);
-        $this->assertEquals('1', $context->segments[0]->metadata['flagsmith_id']);
+        $this->assertEquals('1', $context->segments[0]->metadata['id']);
 
         $this->assertEquals(SegmentRuleType::ALL, $context->segments[0]->rules[0]->type);
         $this->assertEmpty($context->segments[0]->rules[0]->conditions);
@@ -47,7 +47,7 @@ class MappersTest extends TestCase
         $this->assertEquals(SegmentConditionOperator::EQUAL, $context->segments[0]->rules[0]->rules[0]->conditions[0]->operator);
         $this->assertEquals('bar', $context->segments[0]->rules[0]->rules[0]->conditions[0]->value);
 
-        $overrideKey = '1dfdec3e4c67121138b1faa01b82f9f731c692842b865f263824bfabf46d5fff';
+        $overrideKey = '2a3691c8a306223592e2e657e50c44cf126db84730e813adea6f951c502b19e8';
         $this->assertArrayHasKey($overrideKey, $context->segments);
         $this->assertEquals('', $context->segments[$overrideKey]->key);
         $this->assertEquals('identity_overrides', $context->segments[$overrideKey]->name);
@@ -68,7 +68,7 @@ class MappersTest extends TestCase
         $this->assertEquals('some-overridden-value', $context->segments[$overrideKey]->overrides[0]->value);
         $this->assertEquals(-INF, $context->segments[$overrideKey]->overrides[0]->priority);
         $this->assertNull($context->segments[$overrideKey]->overrides[0]->variants);
-        $this->assertEquals(['flagsmith_id' => 1], $context->segments[$overrideKey]->overrides[0]->metadata);
+        $this->assertEquals(['id' => 1], $context->segments[$overrideKey]->overrides[0]->metadata);
 
         $this->assertCount(3, $context->features);
         $this->assertArrayHasKey('some_feature', $context->features);
@@ -78,7 +78,7 @@ class MappersTest extends TestCase
         $this->assertEquals('some-value', $context->features['some_feature']->value);
         $this->assertNull($context->features['some_feature']->priority);
         $this->assertEmpty($context->features['some_feature']->variants);
-        $this->assertEquals(['flagsmith_id' => 1], $context->features['some_feature']->metadata);
+        $this->assertEquals(['id' => 1], $context->features['some_feature']->metadata);
 
         // Test multivariate feature with IDs - priority should be based on ID
         $this->assertArrayHasKey('mv_feature_with_ids', $context->features);
@@ -89,7 +89,7 @@ class MappersTest extends TestCase
         $this->assertEquals('default_value', $mvFeatureWithIds->value);
         $this->assertNull($mvFeatureWithIds->priority);
         $this->assertCount(2, $mvFeatureWithIds->variants);
-        $this->assertEquals(['flagsmith_id' => 2], $mvFeatureWithIds->metadata);
+        $this->assertEquals(['id' => 2], $mvFeatureWithIds->metadata);
 
         // First variant: ID=100, should have priority 100
         $this->assertEquals('variant_a', $mvFeatureWithIds->variants[0]->value);
@@ -110,7 +110,7 @@ class MappersTest extends TestCase
         $this->assertEquals('fallback_value', $mvFeatureWithoutIds->value);
         $this->assertNull($mvFeatureWithoutIds->priority);
         $this->assertCount(3, $mvFeatureWithoutIds->variants);
-        $this->assertEquals(['flagsmith_id' => 3], $mvFeatureWithoutIds->metadata);
+        $this->assertEquals(['id' => 3], $mvFeatureWithoutIds->metadata);
 
         // Variants should be ordered by UUID alphabetically
         $this->assertEquals('option_y', $mvFeatureWithoutIds->variants[0]->value);

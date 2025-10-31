@@ -371,12 +371,12 @@ class Flagsmith
 
         $segments = [];
         foreach ($evaluationResult->segments as $resultSegment) {
-            if (($resultSegment->metadata['flagsmith_id'] ?? null) === null) {
+            if (($resultSegment->metadata['id'] ?? null) === null) {
                 continue;  // Not a real segment, e.g. an identity override virtual segment
             }
 
             $segment = new Segment();
-            $segment->id = $resultSegment->metadata['flagsmith_id'];
+            $segment->id = $resultSegment->metadata['id'];
             $segment->name = $resultSegment->name;
             $segments[] = $segment;
         }
