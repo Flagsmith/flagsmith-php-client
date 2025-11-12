@@ -30,7 +30,7 @@ class EvaluationContext
 
         if (!empty($jsonContext->identity)) {
             $context->identity = new IdentityContext();
-            $context->identity->key = $jsonContext->identity->key;
+            $context->identity->key = $jsonContext->identity->key ?? null;
             $context->identity->identifier = $jsonContext->identity->identifier;
             $context->identity->traits = (array) ($jsonContext->identity->traits ?? []);
         }
