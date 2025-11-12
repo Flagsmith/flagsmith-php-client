@@ -81,17 +81,16 @@ class Engine
         foreach ($context->features as $feature) {
             $featureName = $feature->name;
             $evaluatedFeature = $evaluatedFeatures[$featureName] ?? null;
+            $reason = 'DEFAULT';
             if ($evaluatedFeature) {
-                $evaluatedFlags[$featureName] = self::getFlagResultFromSegmentContext(
-                    $evaluatedFeature,
-                    $matchedSegmentsByFeatureName[$featureName],
-                );
-                continue;
+                $feature = $evaluatedFeature;
+                $reason = "TARGETING_MATCH; segment={$matchedSegmentsByFeatureName[$featureName]->name}";
             }
 
             $evaluatedFlags[$featureName] = self::getFlagResultFromFeatureContext(
                 $feature,
                 $context->identity?->key,
+                $reason,
             );
         }
 
@@ -142,9 +141,10 @@ class Engine
     /**
      * @param FeatureContext $feature
      * @param ?string $splitKey
+     * @param string $reason
      * @return FlagResult
      */
-    private static function getFlagResultFromFeatureContext($feature, $splitKey)
+    private static function getFlagResultFromFeatureContext($feature, $splitKey, $reason = 'DEFAULT')
     {
         if ($splitKey !== null && !empty($feature->variants)) {
             $hashing = new Hashing();
@@ -180,23 +180,7 @@ class Engine
         $flag->name = $feature->name;
         $flag->enabled = $feature->enabled;
         $flag->value = $feature->value;
-        $flag->reason = 'DEFAULT';
-        $flag->metadata = $feature->metadata;
-        return $flag;
-    }
-
-    /**
-     * @param FeatureContext $feature
-     * @param SegmentContext $segment
-     * @return FlagResult
-     */
-    private static function getFlagResultFromSegmentContext($feature, $segment)
-    {
-        $flag = new FlagResult();
-        $flag->name = $feature->name;
-        $flag->enabled = $feature->enabled;
-        $flag->value = $feature->value;
-        $flag->reason = "TARGETING_MATCH; segment={$segment->name}";
+        $flag->reason = $reason;
         $flag->metadata = $feature->metadata;
         return $flag;
     }
