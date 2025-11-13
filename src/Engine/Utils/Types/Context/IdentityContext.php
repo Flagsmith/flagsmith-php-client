@@ -4,7 +4,7 @@ namespace Flagsmith\Engine\Utils\Types\Context;
 
 class IdentityContext
 {
-    /** @var string */
+    /** @var ?string */
     public $key;
 
     /** @var string */
