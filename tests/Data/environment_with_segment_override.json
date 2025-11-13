@@ -1,0 +1,70 @@
+{
+  "api_key": "test-api-key",
+  "name": "Test environment with segment override",
+  "project": {
+    "name": "Test project",
+    "organisation": {
+      "feature_analytics": false,
+      "name": "Test Org",
+      "id": 1,
+      "persist_trait_data": true,
+      "stop_serving_flags": false
+    },
+    "id": 1,
+    "hide_disabled_flags": false,
+    "segments": [
+      {
+        "id": 1,
+        "name": "Test segment with override",
+        "feature_states": [
+          {
+            "feature_state_value": "segment-override-value",
+            "django_id": 10,
+            "featurestate_uuid": "99999999-9999-9999-9999-999999999999",
+            "feature": {
+              "name": "test_feature",
+              "type": "STANDARD",
+              "id": 10
+            },
+            "enabled": false,
+            "multivariate_feature_state_values": [],
+            "feature_segment": {
+              "priority": 1
+            }
+          }
+        ],
+        "rules": [
+          {
+            "type": "ALL",
+            "rules": [],
+            "conditions": [
+              {
+                "operator": "EQUAL",
+                "property_": "$.environment.name",
+                "value": "Test environment with segment override"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "segment_overrides": [],
+  "id": 1,
+  "feature_states": [
+    {
+      "feature_state_value": "environment-default-value",
+      "django_id": 1,
+      "featurestate_uuid": "00000000-0000-0000-0000-000000000000",
+      "feature": {
+        "name": "test_feature",
+        "type": "STANDARD",
+        "id": 10
+      },
+      "segment_id": null,
+      "enabled": true,
+      "multivariate_feature_state_values": []
+    }
+  ],
+  "identity_overrides": []
+}

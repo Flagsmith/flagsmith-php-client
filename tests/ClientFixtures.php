@@ -99,4 +99,18 @@ class ClientFixtures
     {
         return EnvironmentModel::build(json_decode(self::loadFileContents('environment.json')));
     }
+
+    public static function getMockClientWithSegmentOverride()
+    {
+        $handlerBuilder = self::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            self::getRouteBuilder()->new()
+                ->withMethod('GET')
+                ->withPath('/api/v1/environment-document/')
+                ->withFileResponse(self::DATA_DIR . 'environment_with_segment_override.json')
+                ->build()
+        );
+
+        return self::getMockClient($handlerBuilder, false);
+    }
 }
