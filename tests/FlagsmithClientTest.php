@@ -478,4 +478,25 @@ class FlagsmithClientTest extends TestCase
         $expectedUserAgent = "flagsmith-php-sdk/{$expectedVersion}";
         $this->assertEquals($expectedUserAgent, $userAgent);
     }
+
+    public function testGetEnvironmentFlagsOmitsSegmentsFromEvaluation()
+    {
+        // Given
+        $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 1))
+            ->withClient(ClientFixtures::getMockClientWithSegmentOverride());
+        $flagsmith->updateEnvironment();
+
+        // When
+        $environmentFlags = $flagsmith->getEnvironmentFlags();
+        $identityFlags = $flagsmith->getIdentityFlags('test-identity');
+
+        // Then
+        $environmentFlag = $environmentFlags->getFlag('test_feature');
+        $this->assertTrue($environmentFlag->enabled);
+        $this->assertEquals('environment-default-value', $environmentFlag->value);
+
+        $identityFlag = $identityFlags->getFlag('test_feature');
+        $this->assertFalse($identityFlag->enabled);
+        $this->assertEquals('segment-override-value', $identityFlag->value);
+    }
 }

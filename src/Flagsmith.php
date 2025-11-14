@@ -417,7 +417,11 @@ class Flagsmith
             throw new FlagsmithClientError('Evaluation context is not present');
         }
 
-        $evaluationResult = Engine::getEvaluationResult($this->localEvaluationContext);
+        // Omit segments from evaluation context for environment flags
+        $context = $this->localEvaluationContext->deepClone();
+        $context->segments = [];
+
+        $evaluationResult = Engine::getEvaluationResult($context);
 
         return Flags::fromEvaluationResult(
             $evaluationResult,
