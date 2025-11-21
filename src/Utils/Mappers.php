@@ -165,7 +165,7 @@ class Mappers
                 ];
                 $overridesKey[] = $part;
             }
-            $featuresToIdentifiers[serialize($overridesKey)][] = $identityOverride->identifier;
+            $featuresToIdentifiers[json_encode($overridesKey)][] = $identityOverride->identifier;
         }
 
         /** @var array<string, SegmentContext> */
@@ -187,7 +187,7 @@ class Mappers
             $segment->rules = [$identifiersRule];
 
             $segment->overrides = [];
-            foreach (unserialize($serializedOverridesKey) as $overrideKey) {
+            foreach (json_decode($serializedOverridesKey, true) as $overrideKey) {
                 [$featureName, $enabled, $value] = $overrideKey;
                 $featureId = $featureIDsByName[$featureName];
                 $feature = new FeatureContext();
