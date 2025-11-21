@@ -1,4 +1,4 @@
 [submodule "tests/Engine/EngineTests/EngineTestData"]
 	path = tests/Engine/EngineTests/EngineTestData
 	url = git@github.com:Flagsmith/engine-test-data.git
-	tag = v3.4.1
+	branch = feat/mappers/add-mapper-test-data
