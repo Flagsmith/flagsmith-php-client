@@ -253,7 +253,15 @@ class Engine
         $condition,
         $segmentKey,
     ): bool {
-        $contextValue = self::_getContextValue($context, $condition->property);
+        // NOTE: Currently, the only supported condition with a blank property is percentage split. In this
+        // case, we use the identity key as context value. This is mainly to support legacy segments created
+        // before we introduced JSONPath support.
+        if ($condition->operator === SegmentConditionOperator::PERCENTAGE_SPLIT && empty($condition->property)) {
+            $contextValue = $context->identity?->key;
+        } else {
+            $contextValue = self::_getContextValue($context, $condition->property);
+        }
+
         $cast = self::_getCaster($contextValue);
 
         switch ($condition->operator) {
@@ -282,22 +290,16 @@ class Engine
                 return in_array($contextValue, $inValues, strict: true);
 
             case SegmentConditionOperator::PERCENTAGE_SPLIT:
-                if (!is_numeric($condition->value)) {
+                if ($contextValue === null) {
                     return false;
                 }
-
-                /** @var array<string> $objectIds */
-                if ($contextValue !== null) {
-                    $objectIds = [$segmentKey, $contextValue];
-                } elseif ($context->identity !== null) {
-                    $objectIds = [$segmentKey, $context->identity->key];
-                } else {
+                if (!is_numeric($condition->value)) {
                     return false;
                 }
 
                 $hashing = new Hashing();
                 $threshold = $hashing->getHashedPercentageForObjectIds(
-                    $objectIds,
+                    [$segmentKey, $contextValue],
                 );
                 return $threshold <= ((float) $condition->value);
 
