@@ -5,7 +5,6 @@ namespace Flagsmith\Models;
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Engine\Utils\Types\Result\EvaluationResult;
 use Flagsmith\Utils\Collections\FlagModelsList;
-use Flagsmith\Engine\Utils\Collections\FeatureStateModelList;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Utils\AnalyticsProcessor;
 
@@ -107,31 +106,6 @@ class Flags
         $_this->default_flag_handler = $defaultFlagHandler;
         $_this->analytics_processor = $analyticsProcessor;
         return $_this;
-    }
-
-    /**
-     * Build with Feature State Models.
-     * @param FeatureStateModelList $featureStateModelsList
-     * @param AnalyticsProcessor $analyticsProcessor
-     * @param \Closure $defaultFlagHandler
-     * @param mixed $identityId
-     * @return Flags
-     */
-    public static function fromFeatureStateModels(
-        FeatureStateModelList $featureStateModelsList,
-        ?AnalyticsProcessor $analyticsProcessor,
-        ?\Closure $defaultFlagHandler,
-        $identityId = null
-    ) {
-        $flags = [];
-        foreach ($featureStateModelsList->getArrayCopy() as $featureState) {
-            $flags[$featureState->getFeature()->getName()] = Flag::fromFeatureStateModel($featureState, $identityId);
-        }
-
-        return (new self())
-            ->withFlags(new FlagModelsList($flags))
-            ->withDefaultFlagHandler($defaultFlagHandler)
-            ->withAnalyticsProcessor($analyticsProcessor);
     }
 
     /**

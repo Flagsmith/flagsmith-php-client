@@ -83,28 +83,4 @@ class SegmentRuleModel
     {
         return $this->with('type', $type);
     }
-
-    /**
-     * Evaluate the bools.
-     * @return \Closure
-     */
-    public function matchingFunction()
-    {
-        $type = $this->type;
-        return function (array $list) use ($type) {
-            switch ($type) {
-                case SegmentRules::ALL_RULE:
-                    $evaluation = SegmentEvaluator::all($list);
-                    break;
-                case SegmentRules::ANY_RULE:
-                    $evaluation = SegmentEvaluator::any($list);
-                    break;
-                case SegmentRules::NONE_RULE:
-                    $evaluation = SegmentEvaluator::none($list);
-                    break;
-            }
-
-            return $evaluation;
-        };
-    }
 }
