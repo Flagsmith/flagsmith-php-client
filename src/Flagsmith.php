@@ -4,9 +4,6 @@ namespace Flagsmith;
 
 use Flagsmith\Concerns\HasWith;
 use Flagsmith\Engine\Engine;
-use Flagsmith\Engine\Identities\IdentityModel;
-use Flagsmith\Engine\Identities\Traits\TraitModel;
-use Flagsmith\Engine\Utils\Collections\IdentityTraitList;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
@@ -521,39 +518,6 @@ class Flagsmith
 
             throw $e;
         }
-    }
-
-    /**
-     * Buid with identity model.
-     * @param string $identifier
-     * @param array|null $traits
-     * @return IdentityModel
-     *
-     * @throws FlagsmithClientError
-     */
-    private function getIdentityModel(string $identifier, ?object $traits): IdentityModel
-    {
-        if (empty($this->environment)) {
-            throw new FlagsmithClientError('Unable to build identity model when no local environment present.');
-        }
-
-        $traitModels = [];
-        foreach ($traits as $key => $value) {
-            $traitModels[] = (new TraitModel())
-                ->withTraitKey($key)
-                ->withTraitValue($value);
-        }
-
-        $identityModel = isset($this->environment->identity_overrides) ? $this->environment->identity_overrides[$identifier] ?? null : null;
-
-        if (is_null($identityModel)) {
-            return (new IdentityModel())
-                ->withIdentifier($identifier)
-                ->withEnvironmentApiKey($this->environment->getApiKey())
-                ->withIdentityTraits(new IdentityTraitList($traitModels));
-        }
-
-        return $identityModel->withIdentityTraits(new IdentityTraitList($traitModels));
     }
 
     /**
