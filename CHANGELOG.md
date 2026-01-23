@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.0.0...v5.1.0) (2026-01-23)
+
+
+### Features
+
+* Support for PHP 8.5 ([#128](https://github.com/Flagsmith/flagsmith-php-client/issues/128)) ([241e9c5](https://github.com/Flagsmith/flagsmith-php-client/commit/241e9c5d58586cfbd4c71d5b1b9c34228b818e59))
+
 ## [5.0.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v4.5.1...v5.0.0) (2025-12-04)
 
 
