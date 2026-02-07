@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.1](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.0...v5.1.1) (2026-02-07)
+
+
+### Other
+
+* Remove amannn/action-semantic-pull-request workflow ([#130](https://github.com/Flagsmith/flagsmith-php-client/issues/130)) ([f13bf1e](https://github.com/Flagsmith/flagsmith-php-client/commit/f13bf1e7a53e39a1a4e1f1216b297682d13d70ea))
+
 ## [5.1.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.0.0...v5.1.0) (2026-01-23)
 
 
