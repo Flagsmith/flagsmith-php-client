@@ -95,7 +95,7 @@ class Flagsmith
             $this->environmentTtl = $environmentTtl ?? $this->environmentTtl;
             $this->enableLocalEvaluation = !is_null($environmentTtl);
             $this->retries = $retries ?? new Retry(3);
-            $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
+            $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $this->host) : null;
             $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
 
             //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
@@ -144,7 +144,7 @@ class Flagsmith
 
     /**
      * Build with enable Analytics.
-     * @param bool $enableAnalytics
+     * @param AnalyticsProcessor $analytics
      * @return Flagsmith
      */
     public function withAnalytics(AnalyticsProcessor $analytics): self
