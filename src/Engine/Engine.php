@@ -219,19 +219,40 @@ class Engine
             }
         }
 
-        if ($rule->type === SegmentRuleType::ANY && !$any) {
+        if ($rule->type === SegmentRuleType::ANY && !$any && !empty($rule->conditions)) {
             return false;
         }
 
+        $anySubRule = false;
         foreach ($rule->rules as $subRule) {
-            $ruleMatches = self::_contextMatchesRule(
+            $subRuleMatches = self::_contextMatchesRule(
                 $context,
                 $subRule,
                 $segmentKey,
             );
-            if (!$ruleMatches) {
-                return false;
+
+            switch ($rule->type) {
+                case SegmentRuleType::ALL:
+                    if (!$subRuleMatches) {
+                        return false;
+                    }
+                    break;
+                case SegmentRuleType::NONE:
+                    if ($subRuleMatches) {
+                        return false;
+                    }
+                    break;
+                case SegmentRuleType::ANY:
+                    if ($subRuleMatches) {
+                        $anySubRule = true;
+                        break 2;
+                    }
+                    break;
             }
+        }
+
+        if ($rule->type === SegmentRuleType::ANY && !$anySubRule && !empty($rule->rules)) {
+            return false;
         }
 
         return true;
