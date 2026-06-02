@@ -1,5 +1,23 @@
 # Changelog
 
+## [5.1.1](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.0...v5.1.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* respect rule type for sub-rules in segment evaluation ([#134](https://github.com/Flagsmith/flagsmith-php-client/issues/134)) ([d8abcd5](https://github.com/Flagsmith/flagsmith-php-client/commit/d8abcd513bd46338bddb5a19b043912f1801a7b9))
+
+
+### CI
+
+* setup Renovate for engine-test-data tracking ([#133](https://github.com/Flagsmith/flagsmith-php-client/issues/133)) ([f66ebcc](https://github.com/Flagsmith/flagsmith-php-client/commit/f66ebcc4d9d2df28980634fbc342c80b2754ab28))
+
+
+### Other
+
+* Add composer.phar to gitattributes ([#135](https://github.com/Flagsmith/flagsmith-php-client/issues/135)) ([4c9de04](https://github.com/Flagsmith/flagsmith-php-client/commit/4c9de0488dffb26b4049ce40d1aa80153d7ef431))
+* Remove amannn/action-semantic-pull-request workflow ([#130](https://github.com/Flagsmith/flagsmith-php-client/issues/130)) ([f13bf1e](https://github.com/Flagsmith/flagsmith-php-client/commit/f13bf1e7a53e39a1a4e1f1216b297682d13d70ea))
+
 ## [5.1.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.0.0...v5.1.0) (2026-01-23)
 
 
