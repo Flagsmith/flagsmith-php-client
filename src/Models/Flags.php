@@ -177,7 +177,7 @@ class Flags
                 return $this->default_flag_handler->call($this, $featureName);
             }
 
-            throw new FlagsmithClientError('Feature does not exist');
+            throw new FlagsmithClientError("Feature \"{$featureName}\" does not exist");
         }
 
         if (isset($this->analytics_processor) && !empty($flag) && isset($flag->feature_name)) {
