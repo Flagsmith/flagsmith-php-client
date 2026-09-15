@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.1.2](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.1...v5.1.2) (2026-09-15)
+
+
+### CI
+
+* track engine-test-data semver tags via Renovate ([#136](https://github.com/Flagsmith/flagsmith-php-client/issues/136)) ([d8375b1](https://github.com/Flagsmith/flagsmith-php-client/commit/d8375b13fdc574af4a382d7c9a80f02d6fb9ab29))
+
+
+### Other
+
+* Improve error message ([#142](https://github.com/Flagsmith/flagsmith-php-client/issues/142)) ([b9df0cc](https://github.com/Flagsmith/flagsmith-php-client/commit/b9df0cc615847f8b7031fb8d7c1c51f4c914d893))
+
 ## [5.1.1](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.0...v5.1.1) (2026-06-02)
 
 
