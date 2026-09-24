@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.3](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.2...v5.1.3) (2026-09-24)
+
+
+### Bug Fixes
+
+* Mapping identity overrides with multiple features fails ([#143](https://github.com/Flagsmith/flagsmith-php-client/issues/143)) ([fd4bcc9](https://github.com/Flagsmith/flagsmith-php-client/commit/fd4bcc962be9a51d5813e6a9446b273fcf6f121c))
+
 ## [5.1.2](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.1...v5.1.2) (2026-09-15)
 
 
