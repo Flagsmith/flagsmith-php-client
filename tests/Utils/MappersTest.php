@@ -3,6 +3,7 @@
 namespace FlagsmithTest\Utils;
 
 use FlagsmithTest\ClientFixtures;
+use Flagsmith\Engine\Engine;
 use Flagsmith\Engine\Utils\Types\Context\EnvironmentContext;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
@@ -168,6 +169,47 @@ class MappersTest extends TestCase
         $this->assertTrue($segment->overrides[1]->enabled);
         $this->assertEquals('zeta-value', $segment->overrides[1]->value);
         $this->assertEquals(['id' => 2], $segment->overrides[1]->metadata);
+    }
+
+    public function testMapContextAndIdentityToContextKeepsIdentityOverridesOfEveryIdentity(): void
+    {
+        // Given
+        $environmentDocument = json_decode(file_get_contents(__DIR__ . '/../Data/environment.json'));
+        $environmentDocument->identity_overrides = [
+            (object) [
+                'identifier' => 'identity-1',
+                'identity_features' => [self::_identityFeatureState(1, 'some_feature', false, 'value-1')],
+            ],
+            (object) [
+                'identifier' => 'identity-2',
+                'identity_features' => [self::_identityFeatureState(1, 'some_feature', true, 'value-2')],
+            ],
+        ];
+        $environmentContext = Mappers::mapEnvironmentDocumentToContext($environmentDocument);
+
+        // When
+        $identity1Context = Mappers::mapContextAndIdentityToContext($environmentContext, 'identity-1', (object) []);
+        $identity2Context = Mappers::mapContextAndIdentityToContext($environmentContext, 'identity-2', (object) []);
+        $notOverriddenContext = Mappers::mapContextAndIdentityToContext($environmentContext, 'not-overridden', (object) []);
+
+        // Then
+        // 1 API segment + 2 identity override segments
+        $this->assertCount(3, $environmentContext->segments);
+        $this->assertCount(3, $identity1Context->segments);
+        $this->assertCount(3, $identity2Context->segments);
+        $this->assertCount(3, $notOverriddenContext->segments);
+
+        $identity1Flag = Engine::getEvaluationResult($identity1Context)->flags['some_feature'];
+        $this->assertFalse($identity1Flag->enabled);
+        $this->assertEquals('value-1', $identity1Flag->value);
+
+        $identity2Flag = Engine::getEvaluationResult($identity2Context)->flags['some_feature'];
+        $this->assertTrue($identity2Flag->enabled);
+        $this->assertEquals('value-2', $identity2Flag->value);
+
+        $notOverriddenFlag = Engine::getEvaluationResult($notOverriddenContext)->flags['some_feature'];
+        $this->assertTrue($notOverriddenFlag->enabled);
+        $this->assertEquals('some-value', $notOverriddenFlag->value);
     }
 
     private static function _identityFeatureState(int $featureId, string $featureName, bool $enabled, string $value): object

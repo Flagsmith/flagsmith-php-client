@@ -36,14 +36,15 @@ class EvaluationContext
         }
 
         $context->segments = [];
-        foreach (($jsonContext->segments ?? []) as $jsonSegment) {
+        foreach (($jsonContext->segments ?? []) as $segmentKey => $jsonSegment) {
             $segment = new SegmentContext();
             $segment->key = $jsonSegment->key;
             $segment->name = $jsonSegment->name;
             $segment->rules = self::_convertRules($jsonSegment->rules ?? []);
             $segment->overrides = array_values(self::_convertFeatures($jsonSegment->overrides ?? []));
             $segment->metadata = (array) ($jsonSegment->metadata ?? []);
-            $context->segments[$segment->key] = $segment;
+            // Keep the original key, as identity override segments share an empty `key`
+            $context->segments[$segmentKey] = $segment;
         }
 
         $context->features = self::_convertFeatures($jsonContext->features ?? []);
