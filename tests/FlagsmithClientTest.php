@@ -28,6 +28,77 @@ class FlagsmithClientTest extends TestCase
         $this->assertEquals('Test environment', $context->environment->name);
     }
 
+    public function testUpdateEnvironmentPaginatesIdentityOverrides(): void
+    {
+        // Given
+        $pageTwoId = 'identity_override:1:page-2';
+        $pageThreeId = 'identity_override:1:page-3';
+        $nextLink = fn (string $pageId) => sprintf(
+            '</api/v1/environment-document/?page_id=%s>; rel="next"',
+            urlencode($pageId)
+        );
+        $overridePage = fn (string $identifier) => json_encode([
+            'identity_overrides' => [[
+                'identifier' => $identifier,
+                'identity_features' => [[
+                    'feature' => ['id' => 1, 'name' => 'some_feature', 'type' => 'STANDARD'],
+                    'feature_state_value' => 'some-overridden-value',
+                    'enabled' => false,
+                ]],
+            ]],
+        ]);
+
+        $requests = [];
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockClient->expects($this->exactly(3))
+            ->method('sendRequest')
+            ->with($this->callback(function ($request) use (&$requests) {
+                $requests[] = $request;
+                return true;
+            }))
+            ->willReturnOnConsecutiveCalls(
+                new Response(200, ['Link' => $nextLink($pageTwoId)], file_get_contents(__DIR__ . '/Data/environment.json')),
+                new Response(200, ['Link' => $nextLink($pageThreeId)], $overridePage('page-2-id')),
+                new Response(200, [], $overridePage('page-3-id')),
+            );
+
+        $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 1))
+            ->withClient($mockClient);
+
+        // When
+        $flagsmith->updateEnvironment();
+
+        // Then
+        parse_str($requests[1]->getUri()->getQuery(), $secondPageQuery);
+        $this->assertEquals($pageTwoId, $secondPageQuery['page_id']);
+        parse_str($requests[2]->getUri()->getQuery(), $thirdPageQuery);
+        $this->assertEquals($pageThreeId, $thirdPageQuery['page_id']);
+
+        foreach (['overridden-id', 'page-2-id', 'page-3-id'] as $identifier) {
+            $flag = $flagsmith->getIdentityFlags($identifier)->getFlag('some_feature');
+            $this->assertEquals('some-overridden-value', $flag->value);
+        }
+        $this->assertEquals('some-value', $flagsmith->getEnvironmentFlags()->getFlag('some_feature')->value);
+    }
+
+    public function testUpdateEnvironmentWithoutNextLinkIssuesSingleRequest(): void
+    {
+        // Given
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('sendRequest')
+            ->willReturn(new Response(200, [], file_get_contents(__DIR__ . '/Data/environment.json')));
+
+        $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 1))
+            ->withClient($mockClient);
+
+        // When
+        $flagsmith->updateEnvironment();
+
+        // Then
+        $this->assertEquals('Test environment', $flagsmith->getLocalEvaluationContext()->environment->name);
+    }
+
     public function testGetEnvironmentFlagsCallsApiWhenLocalEvaluationDisabled(): void
     {
         // Given
@@ -499,4 +570,5 @@ class FlagsmithClientTest extends TestCase
         $this->assertFalse($identityFlag->enabled);
         $this->assertEquals('segment-override-value', $identityFlag->value);
     }
+
 }
