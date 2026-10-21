@@ -20,8 +20,6 @@ final class LazyFlags implements \ArrayAccess
 {
     public const CIRCULAR_DEPENDENCY_REASON = 'ERROR; code=CIRCULAR_DEPENDENCY';
 
-    private EvaluationContext $context;
-
     /** @var array<string, FlagResult> */
     private array $flags = [];
 
@@ -57,9 +55,8 @@ final class LazyFlags implements \ArrayAccess
     /** @var ?array<string, array<string>> */
     private ?array $segmentKeysByFeatureName = null;
 
-    public function bind(EvaluationContext $context): void
+    public function __construct(private EvaluationContext $context)
     {
-        $this->context = $context;
     }
 
     public function isUsed(): bool

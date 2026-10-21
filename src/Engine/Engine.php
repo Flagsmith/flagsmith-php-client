@@ -48,13 +48,15 @@ class Engine
         $context = self::getEnrichedContext($context);
 
         // Discard any caller-supplied `$.flags`: they are resolved lazily as
-        // segment conditions read them.
-        $resolvedFlags = new LazyFlags();
-        $context = clone $context;
-        $context->flags = $resolvedFlags;
-        $resolvedFlags->bind($context);
+        // segment conditions read them. Without segments, nothing reads them.
+        $resolvedFlags = null;
+        if (!empty($context->segments)) {
+            $context = clone $context;
+            $resolvedFlags = new LazyFlags($context);
+            $context->flags = $resolvedFlags;
+        }
 
-        $cycleHits = $resolvedFlags->getCycleHits();
+        $cycleHits = 0;
 
         foreach ($context->segments as $segment) {
             $matches = self::isContextInSegment($context, $segment);
@@ -102,7 +104,11 @@ class Engine
             );
         }
 
-        if ($resolvedFlags->isUsed()) {
+        if ($resolvedFlags !== null) {
+            $context->flags = null; // Frees both by reference counting, not by the cycle collector
+        }
+
+        if ($resolvedFlags?->isUsed()) {
             // Only reached when a segment condition read a flag. Those results take
             // precedence: they were resolved with the cycle guard, unlike the
             // single-pass recomputation above.
