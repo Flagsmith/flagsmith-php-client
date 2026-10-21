@@ -4,6 +4,7 @@ $finder = PhpCsFixer\Finder::create()
     ->exclude(
         [
             'vendor',
+            'spec-adapter/vendor',
         ]
     )
     ->in(__DIR__);
