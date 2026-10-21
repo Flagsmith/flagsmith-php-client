@@ -6,3 +6,4 @@
 .prettierrc export-ignore
 tests export-ignore
 composer.phar export-ignore
+sdk-spec export-ignore
