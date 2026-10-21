@@ -23,6 +23,7 @@ use Psr\SimpleCache\CacheInterface;
 use Http\Discovery\Psr18ClientDiscovery;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 
 class Flagsmith
@@ -393,15 +394,72 @@ class Flagsmith
             return;
         }
 
-        $environmentData = $this->cachedCall(
+        $environmentData = $this->cached(
             cacheKey: 'Environment',
-            method: 'GET',
-            uri: $this->environment_url,
+            fetch: fn () => $this->fetchEnvironmentDocument(),
             ttl: $this->environmentTtl,
         );
 
         $context = Mappers::mapEnvironmentDocumentToContext($environmentData);
         $this->localEvaluationContext = $context;
+    }
+
+    /**
+     * Fetch the environment document, including the identity overrides of every page.
+     *
+     * @return object
+     *
+     * @throws FlagsmithAPIError
+     */
+    private function fetchEnvironmentDocument(): object
+    {
+        $uri = $this->environment_url;
+        $document = null;
+
+        while (true) {
+            $response = $this->sendRequest('GET', $uri);
+            $page = json_decode(
+                $response->getBody()->getContents(),
+                false,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+
+            if (is_null($document)) {
+                $document = $page;
+            } else {
+                $document->identity_overrides = array_merge(
+                    $document->identity_overrides ?? [],
+                    $page->identity_overrides ?? []
+                );
+            }
+
+            $pageId = $this->extractNextPageId($response->getHeaderLine('Link'));
+            if (is_null($pageId)) {
+                break;
+            }
+
+            $uri = $this->environment_url . '?' . http_build_query(['page_id' => $pageId]);
+        }
+
+        return $document;
+    }
+
+    /**
+     * Extract the page_id of the next environment document page from a Link header.
+     *
+     * @param string $linkHeader
+     * @return string|null
+     */
+    private function extractNextPageId(string $linkHeader): ?string
+    {
+        if (!preg_match('/<([^>]+)>;\s*rel="next"/', $linkHeader, $matches)) {
+            return null;
+        }
+
+        parse_str((string) parse_url($matches[1], PHP_URL_QUERY), $query);
+
+        return isset($query['page_id']) ? (string) $query['page_id'] : null;
     }
 
     /**
@@ -540,8 +598,33 @@ class Flagsmith
         bool $skipCache = false,
         ?int $ttl = null
     ) {
+        return $this->cached(
+            $cacheKey,
+            fn () => $this->call($method, $uri, $body),
+            $skipCache,
+            $ttl
+        );
+    }
+
+    /**
+     * Fetch and cache the result (If Caching is Enabled)
+     *
+     * @param string $cacheKey
+     * @param \Closure $fetch
+     * @param boolean $skipCache
+     * @param integer|null $ttl
+     * @return object|array
+     *
+     * @throws FlagsmithAPIError
+     */
+    private function cached(
+        string $cacheKey,
+        \Closure $fetch,
+        bool $skipCache = false,
+        ?int $ttl = null
+    ) {
         if (!$this->hasCache()) {
-            return $this->call($method, $uri, $body);
+            return $fetch();
         }
 
         if (!$skipCache && !$this->skipCache()) {
@@ -552,7 +635,7 @@ class Flagsmith
         }
 
         try {
-            $response = $this->call($method, $uri, $body);
+            $response = $fetch();
             $this->cache->set($cacheKey, $response, $ttl);
 
             return $response;
@@ -571,10 +654,6 @@ class Flagsmith
     /**
      * Call Request
      *
-     * This sets up a FIG PSR-7 request and returns the response through a PSR-18 call
-     *
-     * Note: We use Guzzle's Request here to construct a PSR-7 RequestInterface
-     *
      * @param string $method
      * @param string $uri
      * @param array $body
@@ -583,6 +662,33 @@ class Flagsmith
      * @throws FlagsmithAPIError
      */
     private function call(string $method, string $uri, array $body = [])
+    {
+        $response = $this->sendRequest($method, $uri, $body);
+
+        //Return as array, easier to work with in PHP
+        return json_decode(
+            $response->getBody()->getContents(),
+            false,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+    }
+
+    /**
+     * Send Request
+     *
+     * This sets up a FIG PSR-7 request and returns the response through a PSR-18 call
+     *
+     * Note: We use Guzzle's Request here to construct a PSR-7 RequestInterface
+     *
+     * @param string $method
+     * @param string $uri
+     * @param array $body
+     * @return ResponseInterface
+     *
+     * @throws FlagsmithAPIError
+     */
+    private function sendRequest(string $method, string $uri, array $body = []): ResponseInterface
     {
         $stream = $this->streamFactory->createStream(json_encode($body));
 
@@ -644,13 +750,7 @@ class Flagsmith
         } while ($retry->isRetry($statusCode));
 
         if ($response) {
-            //Return as array, easier to work with in PHP
-            return json_decode(
-                $response->getBody()->getContents(),
-                false,
-                512,
-                JSON_THROW_ON_ERROR
-            );
+            return $response;
         }
 
         throw new FlagsmithAPIError('No response received!');
