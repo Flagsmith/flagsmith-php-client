@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.1.3](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.2...v5.1.3) (2026-10-21)
+
+
+### Bug Fixes
+
+* Mapping identity overrides with multiple features fails ([#143](https://github.com/Flagsmith/flagsmith-php-client/issues/143)) ([fd4bcc9](https://github.com/Flagsmith/flagsmith-php-client/commit/fd4bcc962be9a51d5813e6a9446b273fcf6f121c))
+
+
+### CI
+
+* Label Renovate's SDK spec bump PRs ([#148](https://github.com/Flagsmith/flagsmith-php-client/issues/148)) ([351aeae](https://github.com/Flagsmith/flagsmith-php-client/commit/351aeae0f3d57d929390a403f5395ed2f4bed0b2))
+* Run the Flagsmith SDK behavioural spec ([#147](https://github.com/Flagsmith/flagsmith-php-client/issues/147)) ([634470d](https://github.com/Flagsmith/flagsmith-php-client/commit/634470da2c2e7d5af4a28f1bd760e07e6ed499e3))
+
 ## [5.1.2](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.1...v5.1.2) (2026-09-15)
 
 
