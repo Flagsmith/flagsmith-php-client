@@ -19,7 +19,7 @@ function asSpecFlags(Flags $flags): array
     );
 }
 
-// Given an SDK client for the environment
+// Create the SDK client
 function createClient(string $environmentKey, string $apiUrl): Flagsmith
 {
     return new Flagsmith(apiKey: $environmentKey, host: $apiUrl);
