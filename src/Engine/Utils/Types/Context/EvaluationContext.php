@@ -2,6 +2,8 @@
 
 namespace Flagsmith\Engine\Utils\Types\Context;
 
+use Flagsmith\Engine\Utils\Types\Result\FlagResult;
+
 class EvaluationContext
 {
     /** @var EnvironmentContext */
@@ -15,6 +17,13 @@ class EvaluationContext
 
     /** @var array<string, FeatureContext> */
     public $features;
+
+    /**
+     * Read-only: populated by the engine as flags are resolved. Any value
+     * supplied by the caller is discarded at evaluation time.
+     * @var null|array<string, FlagResult>|\ArrayAccess<string, FlagResult>
+     */
+    public $flags;
 
     /**
      * @param object $jsonContext
@@ -112,6 +121,7 @@ class EvaluationContext
             $feature->variants = [];
             foreach ($jsonFeature->variants ?? [] as $jsonVariant) {
                 $variant = new FeatureValue();
+                $variant->key = $jsonVariant->key ?? null;
                 $variant->value = $jsonVariant->value;
                 $variant->weight = $jsonVariant->weight;
                 $variant->priority = $jsonVariant->priority;
