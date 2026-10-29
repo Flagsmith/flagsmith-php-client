@@ -35,6 +35,11 @@
             "FlagsmithTest\\": "tests"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "FlagsmithBenchmark\\": "benchmarks"
+        }
+    },
     "config": {
         "allow-plugins": {
             "php-http/discovery": true
