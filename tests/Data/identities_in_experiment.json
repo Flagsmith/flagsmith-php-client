@@ -1,0 +1,75 @@
+{
+    "traits": [
+        {
+            "id": 1,
+            "trait_key": "plan",
+            "trait_value": "premium"
+        }
+    ],
+    "flags": [
+        {
+            "id": 1,
+            "feature": {
+                "id": 1,
+                "name": "banner",
+                "type": "MULTIVARIATE"
+            },
+            "feature_state_value": "hello treatment",
+            "enabled": true,
+            "variant": "treatment",
+            "metadata": {
+                "experiment": {
+                    "id": 7,
+                    "name": "banner experiment",
+                    "in_experiment": true
+                }
+            }
+        },
+        {
+            "id": 2,
+            "feature": {
+                "id": 2,
+                "name": "checkout",
+                "type": "MULTIVARIATE"
+            },
+            "feature_state_value": "control",
+            "enabled": true,
+            "variant": null,
+            "metadata": {
+                "experiment": {
+                    "id": 8,
+                    "name": "checkout experiment",
+                    "in_experiment": false
+                }
+            }
+        },
+        {
+            "id": 3,
+            "feature": {
+                "id": 3,
+                "name": "paused_banner",
+                "type": "MULTIVARIATE"
+            },
+            "feature_state_value": "hello treatment",
+            "enabled": false,
+            "variant": "treatment",
+            "metadata": {
+                "experiment": {
+                    "id": 9,
+                    "name": "paused banner experiment",
+                    "in_experiment": true
+                }
+            }
+        },
+        {
+            "id": 4,
+            "feature": {
+                "id": 4,
+                "name": "footer",
+                "type": "STANDARD"
+            },
+            "feature_state_value": "hello",
+            "enabled": true
+        }
+    ]
+}
