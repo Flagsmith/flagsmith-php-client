@@ -1,0 +1,33 @@
+$schema: https://raw.githubusercontent.com/CodSpeedHQ/codspeed/refs/heads/main/schemas/codspeed.schema.json
+
+benchmarks:
+  - name: getEnvironmentFlags[small]
+    exec: php benchmarks/run.php getEnvironmentFlags small
+  - name: getEnvironmentFlags[medium]
+    exec: php benchmarks/run.php getEnvironmentFlags medium
+  - name: getEnvironmentFlags[large]
+    exec: php benchmarks/run.php getEnvironmentFlags large
+  - name: getIdentityFlagsWithIdentityOverrides[small]
+    exec: php benchmarks/run.php getIdentityFlagsWithIdentityOverrides small
+  - name: getIdentityFlagsWithIdentityOverrides[medium]
+    exec: php benchmarks/run.php getIdentityFlagsWithIdentityOverrides medium
+  - name: getIdentityFlagsWithIdentityOverrides[large]
+    exec: php benchmarks/run.php getIdentityFlagsWithIdentityOverrides large
+  - name: getIdentityFlagsNoTraits[small]
+    exec: php benchmarks/run.php getIdentityFlagsNoTraits small
+  - name: getIdentityFlagsNoTraits[medium]
+    exec: php benchmarks/run.php getIdentityFlagsNoTraits medium
+  - name: getIdentityFlagsNoTraits[large]
+    exec: php benchmarks/run.php getIdentityFlagsNoTraits large
+  - name: getIdentityFlagsWithTraits[small]
+    exec: php benchmarks/run.php getIdentityFlagsWithTraits small
+  - name: getIdentityFlagsWithTraits[medium]
+    exec: php benchmarks/run.php getIdentityFlagsWithTraits medium
+  - name: getIdentityFlagsWithTraits[large]
+    exec: php benchmarks/run.php getIdentityFlagsWithTraits large
+  - name: getIdentitySegmentsWithTraits[small]
+    exec: php benchmarks/run.php getIdentitySegmentsWithTraits small
+  - name: getIdentitySegmentsWithTraits[medium]
+    exec: php benchmarks/run.php getIdentitySegmentsWithTraits medium
+  - name: getIdentitySegmentsWithTraits[large]
+    exec: php benchmarks/run.php getIdentitySegmentsWithTraits large
