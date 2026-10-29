@@ -14,6 +14,16 @@ class UserAgent
      */
     public static function get(): string
     {
+        return 'flagsmith-php-sdk/' . self::getVersion();
+    }
+
+    /**
+     * Get the SDK version.
+     *
+     * @return string The version from composer.json, or "unknown"
+     */
+    public static function getVersion(): string
+    {
         try {
             $composerPath = __DIR__ . '/../../composer.json';
             $content = file_get_contents($composerPath);
@@ -21,12 +31,12 @@ class UserAgent
             $version = $data['version'] ?? null;
 
             if ($version) {
-                return "flagsmith-php-sdk/{$version}";
+                return $version;
             }
         } catch (\Exception $e) {
             // Silently fall through to default
         }
 
-        return 'flagsmith-php-sdk/unknown';
+        return 'unknown';
     }
 }

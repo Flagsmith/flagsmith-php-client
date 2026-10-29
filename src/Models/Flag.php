@@ -8,6 +8,8 @@ class Flag extends BaseFlag
 {
     public int $feature_id;
     public string $feature_name;
+    public ?string $variant = null;
+    public ?Experiment $experiment = null;
 
     /**
      * Get the Feature Name
@@ -48,6 +50,44 @@ class Flag extends BaseFlag
     }
 
     /**
+     * Get the key of the multivariate option the flag was served, if any.
+     * @return string|null
+     */
+    public function getVariant(): ?string
+    {
+        return $this->variant;
+    }
+
+    /**
+     * Build with the variant key.
+     * @param string|null $variant
+     * @return Flag
+     */
+    public function withVariant(?string $variant): self
+    {
+        return $this->with('variant', $variant);
+    }
+
+    /**
+     * Get the running experiment the flag was evaluated under, if any.
+     * @return Experiment|null
+     */
+    public function getExperiment(): ?Experiment
+    {
+        return $this->experiment;
+    }
+
+    /**
+     * Build with the experiment.
+     * @param Experiment|null $experiment
+     * @return Flag
+     */
+    public function withExperiment(?Experiment $experiment): self
+    {
+        return $this->with('experiment', $experiment);
+    }
+
+    /**
      * Build flag from dict.
      * @param object $flagDict
      * @return Flag
@@ -58,6 +98,8 @@ class Flag extends BaseFlag
             ->withFeatureId($flagDict->feature->id)
             ->withFeatureName($flagDict->feature->name)
             ->withEnabled($flagDict->enabled)
-            ->withValue($flagDict->feature_state_value);
+            ->withValue($flagDict->feature_state_value)
+            ->withVariant($flagDict->variant ?? null)
+            ->withExperiment(Experiment::fromApiMetadata($flagDict->metadata ?? null));
     }
 }

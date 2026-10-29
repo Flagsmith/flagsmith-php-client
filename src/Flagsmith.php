@@ -8,10 +8,13 @@ use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Exceptions\FlagsmithClientError;
 use Flagsmith\Exceptions\FlagsmithThrowable;
+use Flagsmith\Models\Flag;
+use Flagsmith\Models\BaseFlag;
 use Flagsmith\Models\Flags;
 use Flagsmith\Models\Segment;
 use Flagsmith\Offline\IOfflineHandler;
 use Flagsmith\Utils\AnalyticsProcessor;
+use Flagsmith\Utils\EventProcessor;
 use Flagsmith\Utils\IdentitiesGenerator;
 use Flagsmith\Utils\Mappers;
 use Flagsmith\Utils\Retry;
@@ -36,6 +39,7 @@ class Flagsmith
     private bool $enableLocalEvaluation = false;
     private Retry $retries;
     private ?AnalyticsProcessor $analyticsProcessor = null;
+    private ?EventProcessor $eventProcessor = null;
     private ?\Closure $defaultFlagHandler = null;
     private ClientInterface $client;
     private RequestFactoryInterface $requestFactory;
@@ -65,10 +69,16 @@ class Flagsmith
         bool $enableAnalytics = false,
         ?\Closure $defaultFlagHandler = null,
         bool $offlineMode = false,
-        ?IOfflineHandler $offlineHandler = null
+        ?IOfflineHandler $offlineHandler = null,
+        bool $enableEvents = false,
+        ?string $eventsApiUrl = null
     ) {
         if ($offlineMode and is_null($offlineHandler)) {
             throw new ValueError('offlineHandler must be provided to use offline mode.');
+        }
+
+        if ($offlineMode and $enableEvents) {
+            throw new ValueError('Cannot use events in offline mode.');
         }
 
         if (!is_null($offlineHandler) and !is_null($defaultFlagHandler)) {
@@ -96,6 +106,7 @@ class Flagsmith
             $this->enableLocalEvaluation = !is_null($environmentTtl);
             $this->retries = $retries ?? new Retry(3);
             $this->analyticsProcessor = $enableAnalytics ? new AnalyticsProcessor($apiKey, $host) : null;
+            $this->eventProcessor = $enableEvents ? new EventProcessor($apiKey, $eventsApiUrl) : null;
             $this->defaultFlagHandler = $defaultFlagHandler ?? $this->defaultFlagHandler;
 
             //We default to using Guzzle for the HTTP client (as this is how it worked in 1.0)
@@ -150,6 +161,16 @@ class Flagsmith
     public function withAnalytics(AnalyticsProcessor $analytics): self
     {
         return $this->with('analyticsProcessor', $analytics);
+    }
+
+    /**
+     * Build with an event processor, enabling events.
+     * @param EventProcessor $eventProcessor
+     * @return Flagsmith
+     */
+    public function withEventProcessor(EventProcessor $eventProcessor): self
+    {
+        return $this->with('eventProcessor', $eventProcessor);
     }
 
     /**
@@ -343,6 +364,115 @@ class Flagsmith
     }
 
     /**
+     * Get a flag for an identity, and record the identity's exposure to it.
+     *
+     * The exposure is a `$flag_exposure` event whose value is the variant the identity was served. It
+     * is only recorded when the flag exists, is enabled, and the identity is enrolled in a running
+     * experiment on the feature with a variant, so that experiment data stays clean.
+     *
+     * @param string $featureName
+     * @param string $identifier
+     * @param object|null $traits
+     * @return BaseFlag
+     *
+     * @throws ValueError if events are not enabled
+     * @throws FlagsmithThrowable
+     */
+    public function getExperimentFlag(string $featureName, string $identifier, ?object $traits = null): BaseFlag
+    {
+        if (is_null($this->eventProcessor)) {
+            throw new ValueError('Events must be enabled to use experiment flags.');
+        }
+
+        $flag = $this->getIdentityFlags($identifier, $traits)->getFlag($featureName);
+        $experiment = $flag instanceof Flag ? $flag->getExperiment() : null;
+        if ($flag->getEnabled() && $experiment?->getInExperiment() && !is_null($flag->getVariant())) {
+            $this->trackExposureEvent(
+                featureName: $featureName,
+                identifier: $identifier,
+                value: $flag->getVariant(),
+                traits: $traits,
+                metadata: ['experiment_id' => $experiment->getId()],
+            );
+        }
+
+        return $flag;
+    }
+
+    /**
+     * Record a custom event, e.g. a conversion to reconcile with experiment exposures.
+     *
+     * @param string $event the event name. Names starting with `$` are reserved for Flagsmith.
+     * @param string|null $identifier
+     * @param string|int|float|bool|null $value
+     * @param object|null $traits
+     * @param array<string, mixed>|null $metadata
+     * @return void
+     *
+     * @throws ValueError if events are not enabled, or the event name is reserved
+     */
+    public function trackEvent(
+        string $event,
+        ?string $identifier = null,
+        string|int|float|bool|null $value = null,
+        ?object $traits = null,
+        ?array $metadata = null
+    ): void {
+        if (is_null($this->eventProcessor)) {
+            throw new ValueError('Events must be enabled to track events.');
+        }
+        if (str_starts_with($event, '$') && $event !== EventProcessor::FLAG_EXPOSURE_EVENT) {
+            throw new ValueError("Event name \"{$event}\" uses the reserved \"$\" prefix but is not a known system event.");
+        }
+
+        $this->eventProcessor->trackEvent($event, $identifier, $value, $this->resolveTraitValues($traits), $metadata);
+    }
+
+    /**
+     * Record a `$flag_exposure` event for a feature evaluated elsewhere than `getExperimentFlag`.
+     *
+     * @param string $featureName
+     * @param string $identifier
+     * @param string|int|float|bool|null $value the variant the identity was served
+     * @param object|null $traits
+     * @param array<string, mixed>|null $metadata
+     * @return void
+     *
+     * @throws ValueError if events are not enabled
+     */
+    public function trackExposureEvent(
+        string $featureName,
+        string $identifier,
+        string|int|float|bool|null $value = null,
+        ?object $traits = null,
+        ?array $metadata = null
+    ): void {
+        if (is_null($this->eventProcessor)) {
+            throw new ValueError('Events must be enabled to track exposure events.');
+        }
+        if ($identifier === '') {
+            throw new ValueError('An exposure requires an identifier to reconcile with conversion events.');
+        }
+
+        $this->eventProcessor->trackExposureEvent(
+            $featureName,
+            $identifier,
+            $value,
+            $this->resolveTraitValues($traits),
+            $metadata,
+        );
+    }
+
+    /**
+     * Send all buffered events to the Flagsmith events API now. Does nothing if events are not enabled.
+     * @return void
+     */
+    public function flushEvents(): void
+    {
+        $this->eventProcessor?->flush();
+    }
+
+    /**
      * Get a list of segments that the given identity is in.
      * @param string $identifier a unique identifier for the identity in the current
      *      environment , e.g. email address, username, uuid
@@ -518,6 +648,25 @@ class Flagsmith
 
             throw $e;
         }
+    }
+
+    /**
+     * Map traits, including transient ones given as objects, to their values.
+     * @param object|null $traits
+     * @return array<string, mixed>|null
+     */
+    private function resolveTraitValues(?object $traits): ?array
+    {
+        if (is_null($traits)) {
+            return null;
+        }
+
+        $values = [];
+        foreach ($traits as $key => $value) {
+            $values[$key] = is_object($value) ? $value->value : $value;
+        }
+
+        return $values;
     }
 
     /**

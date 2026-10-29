@@ -4,6 +4,7 @@ use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Exceptions\FlagsmithAPIError;
 use Flagsmith\Flagsmith;
 use Flagsmith\Models\DefaultFlag;
+use Flagsmith\Utils\EventProcessor;
 use FlagsmithTest\ClientFixtures;
 use FlagsmithTest\Offline\FakeOfflineHandler;
 use GuzzleHttp\Psr7\Response;
@@ -498,5 +499,231 @@ class FlagsmithClientTest extends TestCase
         $identityFlag = $identityFlags->getFlag('test_feature');
         $this->assertFalse($identityFlag->enabled);
         $this->assertEquals('segment-override-value', $identityFlag->value);
+    }
+
+    private function identityInExperimentClient(): ClientInterface
+    {
+        $handlerBuilder = ClientFixtures::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+                ->withMethod('POST')
+                ->withPath('/api/v1/identities/')
+                ->withFileResponse(__DIR__ . '/Data/identities_in_experiment.json')
+                ->build()
+        );
+
+        return ClientFixtures::getMockClient($handlerBuilder, false);
+    }
+
+    private function eventsApiClient(array &$events): ClientInterface
+    {
+        $client = $this->createMock(ClientInterface::class);
+        $client->method('sendRequest')
+            ->willReturnCallback(function ($request) use (&$events) {
+                array_push($events, ...json_decode((string) $request->getBody(), true)['events']);
+                return new Response(202);
+            });
+
+        return $client;
+    }
+
+    public function testGetExperimentFlagRecordsTheExposureOfAnIdentityInAnExperiment()
+    {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withClient($this->identityInExperimentClient())
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->eventsApiClient($events)));
+
+        // When
+        $flag = $flagsmith->getExperimentFlag('banner', 'user_123', (object) ['plan' => 'premium']);
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertTrue($flag->getEnabled());
+        $this->assertEquals('hello treatment', $flag->getValue());
+        $this->assertEquals('treatment', $flag->getVariant());
+        $this->assertEquals(7, $flag->getExperiment()->getId());
+        $this->assertEquals('banner experiment', $flag->getExperiment()->getName());
+        $this->assertTrue($flag->getExperiment()->getInExperiment());
+        $this->assertCount(1, $events);
+        $this->assertEquals('$flag_exposure', $events[0]['event']);
+        $this->assertEquals('banner', $events[0]['feature_name']);
+        $this->assertEquals('user_123', $events[0]['identifier']);
+        $this->assertEquals('treatment', $events[0]['value']);
+        $this->assertEquals(['plan' => 'premium'], $events[0]['traits']);
+        $this->assertEquals(7, $events[0]['metadata']['experiment_id']);
+    }
+
+    public static function flagsNotExposedProvider(): array
+    {
+        return [
+            'identity not enrolled in the experiment' => ['checkout'],
+            'flag disabled' => ['paused_banner'],
+            'feature without an experiment' => ['footer'],
+        ];
+    }
+
+    /**
+     * @dataProvider flagsNotExposedProvider
+     */
+    public function testGetExperimentFlagDoesNotRecordAnExposureOutsideARunningExperiment(string $featureName)
+    {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withClient($this->identityInExperimentClient())
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->eventsApiClient($events)));
+
+        // When
+        $flag = $flagsmith->getExperimentFlag($featureName, 'user_123');
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertEquals($featureName, $flag->getFeatureName());
+        $this->assertEmpty($events);
+    }
+
+    public function testGetExperimentFlagDoesNotRecordAnExposureForADefaultFlag()
+    {
+        // Given
+        $events = [];
+        $defaultFlag = (new DefaultFlag())->withEnabled(true)->withValue('default');
+        $flagsmith = (new Flagsmith('api_key', defaultFlagHandler: fn (string $featureName) => $defaultFlag))
+            ->withClient($this->identityInExperimentClient())
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->eventsApiClient($events)));
+
+        // When
+        $flag = $flagsmith->getExperimentFlag('unknown_feature', 'user_123');
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertSame($defaultFlag, $flag);
+        $this->assertEmpty($events);
+    }
+
+    public function testTrackEventSendsTheEventWithTraitValues()
+    {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->eventsApiClient($events)));
+        $traits = (object) ['plan' => 'premium', 'session' => (object) ['value' => 'abc', 'transient' => true]];
+
+        // When
+        $flagsmith->trackEvent('checkout_completed', 'user_123', 42, $traits, ['currency' => 'GBP']);
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertCount(1, $events);
+        $this->assertEquals('checkout_completed', $events[0]['event']);
+        $this->assertEquals('user_123', $events[0]['identifier']);
+        $this->assertEquals('42', $events[0]['value']);
+        $this->assertEquals(['plan' => 'premium', 'session' => 'abc'], $events[0]['traits']);
+        $this->assertEquals('GBP', $events[0]['metadata']['currency']);
+    }
+
+    public function testTrackEventRejectsReservedEventNames()
+    {
+        // Given
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->createMock(ClientInterface::class)));
+
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('Event name "$purchase" uses the reserved "$" prefix but is not a known system event.');
+
+        // When
+        $flagsmith->trackEvent('$purchase');
+    }
+
+    public function testTrackExposureEventSendsAFlagExposure()
+    {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->eventsApiClient($events)));
+
+        // When
+        $flagsmith->trackExposureEvent('banner', 'user_123', 'control', metadata: ['experiment_id' => 1]);
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertCount(1, $events);
+        $this->assertEquals('$flag_exposure', $events[0]['event']);
+        $this->assertEquals('banner', $events[0]['feature_name']);
+        $this->assertEquals('user_123', $events[0]['identifier']);
+        $this->assertEquals('control', $events[0]['value']);
+        $this->assertEquals(1, $events[0]['metadata']['experiment_id']);
+    }
+
+    public function testTrackExposureEventRequiresAnIdentifier()
+    {
+        // Given
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->createMock(ClientInterface::class)));
+
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('An exposure requires an identifier to reconcile with conversion events.');
+
+        // When
+        $flagsmith->trackExposureEvent('banner', '', 'control');
+    }
+
+    public static function eventMethodsProvider(): array
+    {
+        return [
+            'getExperimentFlag' => [fn (Flagsmith $flagsmith) => $flagsmith->getExperimentFlag('banner', 'user_123'), 'Events must be enabled to use experiment flags.'],
+            'trackEvent' => [fn (Flagsmith $flagsmith) => $flagsmith->trackEvent('purchase'), 'Events must be enabled to track events.'],
+            'trackExposureEvent' => [fn (Flagsmith $flagsmith) => $flagsmith->trackExposureEvent('banner', 'user_123'), 'Events must be enabled to track exposure events.'],
+        ];
+    }
+
+    /**
+     * @dataProvider eventMethodsProvider
+     */
+    public function testEventsMustBeEnabledToRecordEvents(\Closure $recordEvent, string $message)
+    {
+        // Given
+        $flagsmith = new Flagsmith('api_key');
+
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage($message);
+
+        // When
+        $recordEvent($flagsmith);
+    }
+
+    public function testFlushEventsDoesNothingWithoutEvents()
+    {
+        // Given
+        $client = $this->createMock(ClientInterface::class);
+        $client->expects($this->never())->method('sendRequest');
+        $flagsmith = (new Flagsmith('api_key'))->withClient($client);
+
+        // When / Then
+        $flagsmith->flushEvents();
+    }
+
+    public function testEventsCanBeEnabledWhenCreatingTheClient()
+    {
+        // Given
+        $flagsmith = new Flagsmith('api_key', enableEvents: true, eventsApiUrl: 'http://127.0.0.1:1/');
+
+        // When
+        $flagsmith->trackEvent('purchase');
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->addToAssertionCount(1);
+    }
+
+    public function testCannotUseEventsInOfflineMode()
+    {
+        // Given
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('Cannot use events in offline mode.');
+
+        // When
+        new Flagsmith(offlineMode: true, offlineHandler: new FakeOfflineHandler(), enableEvents: true);
     }
 }
