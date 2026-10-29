@@ -167,9 +167,14 @@ class Flagsmith
      * Build with an event processor, enabling events.
      * @param EventProcessor $eventProcessor
      * @return Flagsmith
+     * @throws ValueError
      */
     public function withEventProcessor(EventProcessor $eventProcessor): self
     {
+        if ($this->offlineMode) {
+            throw new ValueError('Cannot use events in offline mode.');
+        }
+
         return $this->with('eventProcessor', $eventProcessor);
     }
 

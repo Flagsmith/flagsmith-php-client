@@ -726,4 +726,15 @@ class FlagsmithClientTest extends TestCase
         // When
         new Flagsmith(offlineMode: true, offlineHandler: new FakeOfflineHandler(), enableEvents: true);
     }
+
+    public function testCannotAddEventProcessorInOfflineMode()
+    {
+        // Given
+        $flagsmith = new Flagsmith(offlineMode: true, offlineHandler: new FakeOfflineHandler());
+        $this->expectException(ValueError::class);
+        $this->expectExceptionMessage('Cannot use events in offline mode.');
+
+        // When
+        $flagsmith->withEventProcessor(new EventProcessor('api_key', client: $this->createMock(ClientInterface::class)));
+    }
 }

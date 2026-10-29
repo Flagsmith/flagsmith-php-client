@@ -16,6 +16,8 @@ use Psr\Http\Message\StreamFactoryInterface;
  * tracked after the flush interval has elapsed.
  *
  * Recording an event never fails the calling application: a batch that cannot be posted is dropped.
+ * Flushing sends the request synchronously, and PSR-18 has no per-request timeout, so a flush waits
+ * as long as the HTTP client allows. Pass a `$client` configured with a short timeout to bound it.
  */
 class EventProcessor
 {
@@ -30,7 +32,6 @@ class EventProcessor
     private string $environmentKey;
     private int $maxBuffer;
     private int $flushIntervalSeconds;
-    private int $timeout;
     private int $lastFlushed;
     /** @var array<int, array<string, mixed>> */
     public array $events = [];
@@ -45,7 +46,6 @@ class EventProcessor
         ?string $eventsApiUrl = null,
         int $maxBuffer = self::DEFAULT_MAX_BUFFER,
         int $flushIntervalSeconds = self::DEFAULT_FLUSH_INTERVAL_SECONDS,
-        int $timeout = 3,
         ?ClientInterface $client = null,
         ?RequestFactoryInterface $requestFactory = null,
         ?StreamFactoryInterface $streamFactory = null
@@ -54,7 +54,6 @@ class EventProcessor
         $this->environmentKey = $environmentKey;
         $this->maxBuffer = $maxBuffer;
         $this->flushIntervalSeconds = $flushIntervalSeconds;
-        $this->timeout = $timeout;
         $this->lastFlushed = time();
 
         $this->client = $client ?? Psr18ClientDiscovery::find();
