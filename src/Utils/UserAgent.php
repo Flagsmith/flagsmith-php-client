@@ -7,6 +7,8 @@ namespace Flagsmith\Utils;
  */
 class UserAgent
 {
+    private static ?string $version = null;
+
     /**
      * Get the user agent string for the SDK.
      *
@@ -24,10 +26,16 @@ class UserAgent
      */
     public static function getVersion(): string
     {
+        // The version cannot change within a process, so composer.json is read at most once.
+        return self::$version ??= self::readVersion();
+    }
+
+    private static function readVersion(): string
+    {
         try {
             $composerPath = __DIR__ . '/../../composer.json';
             $content = file_get_contents($composerPath);
-            $data = json_decode($content, true);
+            $data = $content === false ? null : json_decode($content, true);
             $version = $data['version'] ?? null;
 
             if ($version) {
