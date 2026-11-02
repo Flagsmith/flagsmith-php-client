@@ -46,6 +46,40 @@
             ]
           }
         ]
+      },
+      {
+        "id": 2,
+        "name": "Premium users",
+        "feature_states": [
+          {
+            "feature_state_value": "premium-override-value",
+            "django_id": 20,
+            "featurestate_uuid": "88888888-8888-8888-8888-888888888888",
+            "feature": {
+              "name": "premium_feature",
+              "type": "STANDARD",
+              "id": 20
+            },
+            "enabled": true,
+            "multivariate_feature_state_values": [],
+            "feature_segment": {
+              "priority": 2
+            }
+          }
+        ],
+        "rules": [
+          {
+            "type": "ALL",
+            "rules": [],
+            "conditions": [
+              {
+                "operator": "EQUAL",
+                "property_": "plan",
+                "value": "premium"
+              }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -63,6 +97,19 @@
       },
       "segment_id": null,
       "enabled": true,
+      "multivariate_feature_state_values": []
+    },
+    {
+      "feature_state_value": "premium-default-value",
+      "django_id": 2,
+      "featurestate_uuid": "11111111-1111-1111-1111-111111111111",
+      "feature": {
+        "name": "premium_feature",
+        "type": "STANDARD",
+        "id": 20
+      },
+      "segment_id": null,
+      "enabled": false,
       "multivariate_feature_state_values": []
     }
   ],

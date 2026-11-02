@@ -414,9 +414,8 @@ class Flagsmith
             throw new FlagsmithClientError('Evaluation context is not present');
         }
 
-        // Omit segments from evaluation context for environment flags
         $context = $this->localEvaluationContext->deepClone();
-        $context->segments = [];
+        $context->segments = Mappers::selectIdentityFreeSegments($context->segments);
 
         $evaluationResult = Engine::getEvaluationResult($context);
 

@@ -16,6 +16,9 @@ use Flagsmith\Engine\Utils\Types\Context\SegmentRuleType;
 
 class Mappers
 {
+    /** Condition properties resolvable without an identity */
+    private const IDENTITY_FREE_PROPERTY_PREFIXES = ['$.environment.', '$.environment[', '$.flags.', '$.flags['];
+
     /**
      * Parse the environment document into an EvaluationContext object
      * @param object $environmentDocument
@@ -69,6 +72,49 @@ class Mappers
         $context = $context->deepClone();
         $context->identity = $identity;
         return $context;
+    }
+
+    /**
+     * Select the segments that can be evaluated without an identity, i.e. reading neither identity nor traits
+     * @param array<string, SegmentContext> $segments
+     * @return array<string, SegmentContext>
+     */
+    public static function selectIdentityFreeSegments($segments): array
+    {
+        return array_filter($segments, fn ($segment) => self::_isIdentityFree($segment->rules));
+    }
+
+    /**
+     * @param ?array<SegmentRule> $rules
+     * @return bool
+     */
+    private static function _isIdentityFree($rules): bool
+    {
+        foreach ($rules ?? [] as $rule) {
+            foreach ($rule->conditions ?? [] as $condition) {
+                if (!self::_isIdentityFreeProperty($condition->property)) {
+                    return false;
+                }
+            }
+            if (!self::_isIdentityFree($rule->rules)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @param ?string $property
+     * @return bool
+     */
+    private static function _isIdentityFreeProperty($property): bool
+    {
+        foreach (self::IDENTITY_FREE_PROPERTY_PREFIXES as $prefix) {
+            if (str_starts_with((string) $property, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

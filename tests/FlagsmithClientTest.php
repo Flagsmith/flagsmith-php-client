@@ -479,7 +479,7 @@ class FlagsmithClientTest extends TestCase
         $this->assertEquals($expectedUserAgent, $userAgent);
     }
 
-    public function testGetEnvironmentFlagsOmitsSegmentsFromEvaluation()
+    public function testGetEnvironmentFlagsAppliesOnlySegmentsNotNeedingAnIdentity()
     {
         // Given
         $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 1))
@@ -488,15 +488,19 @@ class FlagsmithClientTest extends TestCase
 
         // When
         $environmentFlags = $flagsmith->getEnvironmentFlags();
-        $identityFlags = $flagsmith->getIdentityFlags('test-identity');
+        $identityFlags = $flagsmith->getIdentityFlags('test-identity', (object) ['plan' => 'premium']);
 
         // Then
         $environmentFlag = $environmentFlags->getFlag('test_feature');
-        $this->assertTrue($environmentFlag->enabled);
-        $this->assertEquals('environment-default-value', $environmentFlag->value);
+        $this->assertFalse($environmentFlag->enabled);
+        $this->assertEquals('segment-override-value', $environmentFlag->value);
 
-        $identityFlag = $identityFlags->getFlag('test_feature');
-        $this->assertFalse($identityFlag->enabled);
-        $this->assertEquals('segment-override-value', $identityFlag->value);
+        $environmentPremiumFlag = $environmentFlags->getFlag('premium_feature');
+        $this->assertFalse($environmentPremiumFlag->enabled);
+        $this->assertEquals('premium-default-value', $environmentPremiumFlag->value);
+
+        $identityPremiumFlag = $identityFlags->getFlag('premium_feature');
+        $this->assertTrue($identityPremiumFlag->enabled);
+        $this->assertEquals('premium-override-value', $identityPremiumFlag->value);
     }
 }
