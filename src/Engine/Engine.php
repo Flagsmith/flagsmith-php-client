@@ -484,6 +484,12 @@ class Engine
         }
 
         if (str_starts_with($property, '$.')) {
+            $memberNames = self::_getMemberNames($property);
+            if ($memberNames !== null) {
+                $value = self::_digMemberNames($context, $memberNames);
+                return in_array(gettype($value), self::VALID_CONTEXT_VALUE_TYPES) ? $value : null;
+            }
+
             try {
                 $jsonpath = new JSONPath($context);
                 $results = $jsonpath->find($property)->getData();
@@ -501,6 +507,45 @@ class Engine
         }
 
         return null;
+    }
+
+    /**
+     * The member names of a JSONPath made of member names only, e.g. `$.identity.identifier`, or null for any other path
+     * @param string $property
+     * @return ?array<string>
+     */
+    private static function _getMemberNames($property): ?array
+    {
+        static $memberNamesByProperty = [];
+        if (!array_key_exists($property, $memberNamesByProperty)) {
+            $memberNamesByProperty[$property] = preg_match('/^\$(\.[\p{L}\p{N}_-]+)+$/u', $property)
+                ? explode('.', substr($property, 2))
+                : null;
+        }
+        return $memberNamesByProperty[$property];
+    }
+
+    /**
+     * Read a context value by member names, as a JSONPath of member names only would
+     * @param EvaluationContext $context
+     * @param array<string> $memberNames
+     * @return ?mixed
+     */
+    private static function _digMemberNames($context, $memberNames)
+    {
+        $value = $context;
+        foreach ($memberNames as $memberName) {
+            $value = match (true) {
+                is_array($value) => $value[$memberName] ?? null,
+                $value instanceof \ArrayAccess => $value[$memberName],
+                is_object($value) => $value->$memberName ?? null,
+                default => null,
+            };
+            if ($value === null) {
+                return null;
+            }
+        }
+        return $value;
     }
 
     /**
