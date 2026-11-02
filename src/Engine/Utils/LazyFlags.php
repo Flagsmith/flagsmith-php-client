@@ -150,6 +150,7 @@ final class LazyFlags implements \ArrayAccess
             : Engine::getFlagResultFromFeatureContext(
                 $feature,
                 $this->context->identity?->key,
+                Engine::getDefaultReason($featureName, $this->segmentKeysByFeatureName),
             );
     }
 

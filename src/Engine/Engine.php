@@ -56,9 +56,16 @@ class Engine
             $context->flags = $resolvedFlags;
         }
 
+        /** @var array<string, true> Names of the features overridden by any segment */
+        $targetedFeatureNames = [];
+
         $cycleHits = 0;
 
         foreach ($context->segments as $segment) {
+            foreach ($segment->overrides as $overrideFeature) {
+                $targetedFeatureNames[$overrideFeature->name] = true;
+            }
+
             $matches = self::isContextInSegment($context, $segment);
 
             if ($resolvedFlags->getCycleHits() !== $cycleHits) {
@@ -91,7 +98,7 @@ class Engine
         foreach ($context->features as $feature) {
             $featureName = $feature->name;
             $evaluatedFeature = $evaluatedFeatures[$featureName] ?? null;
-            $reason = 'DEFAULT';
+            $reason = self::getDefaultReason($featureName, $targetedFeatureNames);
             if ($evaluatedFeature) {
                 $feature = $evaluatedFeature;
                 $reason = "TARGETING_MATCH; segment={$matchedSegmentsByFeatureName[$featureName]->name}";
@@ -161,6 +168,21 @@ class Engine
     {
         return $incumbent === null
             || ($candidate->priority ?? self::WEAKEST_PRIORITY) < ($incumbent->priority ?? self::WEAKEST_PRIORITY);
+    }
+
+    /**
+     * The reason for a flag served by its environment default.
+     *
+     * DEFAULT if any segment overrides the feature, though none matched, or
+     * STATIC if no segment overrides it.
+     * @internal
+     * @param string $featureName
+     * @param array<string, mixed> $targetedFeatureNames Keyed by the names of the features any segment overrides
+     * @return string
+     */
+    public static function getDefaultReason($featureName, $targetedFeatureNames): string
+    {
+        return isset($targetedFeatureNames[$featureName]) ? 'DEFAULT' : 'STATIC';
     }
 
     /**
