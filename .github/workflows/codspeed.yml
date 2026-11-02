@@ -1,0 +1,43 @@
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read  # Check out the repository and its submodules
+  id-token: write  # Authenticate result uploads to CodSpeed via OIDC
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: codspeed-macro
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962  # 2.40.0
+        with:
+          php-version: "8.5"
+          extensions: "bcmath, gmp"
+
+      - name: Install CodSpeed CLI
+        env:
+          CODSPEED_VERSION: 5.6.0
+          CODSPEED_INSTALLER_SHA256: bf1bf63661e203bcabc0c84fdef0337f8658fc8340c467a6a3bca81040d99f40
+        run: |
+          installer=$(mktemp)
+          curl -fsSL -o "$installer" "https://codspeed.io/v$CODSPEED_VERSION/install.sh"
+          echo "$CODSPEED_INSTALLER_SHA256  $installer" | sha256sum --check --strict
+          bash "$installer" --quiet
+
+      - name: Run benchmarks
+        run: make benchmark
