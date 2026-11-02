@@ -56,7 +56,7 @@ class MappersTest extends TestCase
 
         $this->assertEquals(SegmentRuleType::ALL, $context->segments[$overrideKey]->rules[0]->type);
         $this->assertCount(1, $context->segments[$overrideKey]->rules[0]->conditions);
-        $this->assertNull($context->segments[$overrideKey]->rules[0]->rules);
+        $this->assertEmpty($context->segments[$overrideKey]->rules[0]->rules);
 
         $this->assertEquals('$.identity.identifier', $context->segments[$overrideKey]->rules[0]->conditions[0]->property);
         $this->assertEquals(SegmentConditionOperator::IN, $context->segments[$overrideKey]->rules[0]->conditions[0]->operator);

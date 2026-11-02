@@ -69,7 +69,7 @@ class Mappers
         $identity->identifier = $identifier;
         $identity->traits = (array) $traits;
 
-        $context = $context->deepClone();
+        $context = clone $context;  // The engine does not modify the context it evaluates
         $context->identity = $identity;
         return $context;
     }
@@ -230,6 +230,7 @@ class Mappers
             $identifiersRule = new SegmentRule();
             $identifiersRule->type = SegmentRuleType::ALL;
             $identifiersRule->conditions = [$identifiersCondition];
+            $identifiersRule->rules = [];
             $segment->rules = [$identifiersRule];
 
             $segment->overrides = [];
