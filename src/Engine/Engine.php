@@ -458,13 +458,18 @@ class Engine
             return version_compare($contextValue, $actualVersion, $operator);
         }
 
+        $conditionValue = $cast($condition->value);
+        if ($conditionValue === null) {
+            return false;  // Not coercible to the context value type
+        }
+
         return match ($operator) {
-            '==' => $contextValue === $cast($condition->value),
-            '!=' => $contextValue !== $cast($condition->value),
-            '>' => $contextValue > $cast($condition->value),
-            '>=' => $contextValue >= $cast($condition->value),
-            '<' => $contextValue < $cast($condition->value),
-            '<=' => $contextValue <= $cast($condition->value),
+            '==' => $contextValue === $conditionValue,
+            '!=' => $contextValue !== $conditionValue,
+            '>' => $contextValue > $conditionValue,
+            '>=' => $contextValue >= $conditionValue,
+            '<' => $contextValue < $conditionValue,
+            '<=' => $contextValue <= $conditionValue,
         };
     }
 
@@ -572,8 +577,8 @@ class Engine
         return match (gettype($contextValue)) {
             'boolean' => fn ($v) => !in_array($v, ['False', 'false']),
             'string' => 'strval',
-            'integer' => fn ($v) => is_numeric($v) ? (int) $v : $v,
-            'double' => fn ($v) => is_numeric($v) ? (float) $v : $v,
+            'integer' => fn ($v) => filter_var($v, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE),
+            'double' => fn ($v) => filter_var($v, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE),
         };
     }
 }
