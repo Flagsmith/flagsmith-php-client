@@ -3,6 +3,7 @@
 namespace Flagsmith\Engine;
 
 use Flagsmith\Engine\Utils\Hashing;
+use Flagsmith\Engine\Utils\LazyFlags;
 use Flagsmith\Engine\Utils\Semver;
 use Flagsmith\Engine\Utils\Types\Context\EvaluationContext;
 use Flagsmith\Engine\Utils\Types\Context\FeatureContext;
@@ -46,8 +47,35 @@ class Engine
 
         $context = self::getEnrichedContext($context);
 
+        // Discard any caller-supplied `$.flags`: they are resolved lazily as
+        // segment conditions read them. Without segments, nothing reads them.
+        $resolvedFlags = null;
+        if (!empty($context->segments)) {
+            $context = clone $context;
+            $resolvedFlags = new LazyFlags($context);
+            $context->flags = $resolvedFlags;
+        }
+
+        /** @var array<string, true> Names of the features overridden by any segment */
+        $targetedFeatureNames = [];
+
+        $cycleHits = 0;
+
         foreach ($context->segments as $segment) {
-            if (!self::isContextInSegment($context, $segment)) {
+            foreach ($segment->overrides as $overrideFeature) {
+                $targetedFeatureNames[$overrideFeature->name] = true;
+            }
+
+            $matches = self::isContextInSegment($context, $segment);
+
+            if ($resolvedFlags->getCycleHits() !== $cycleHits) {
+                // Evaluating this segment cut a cycle, so it matched, or failed to,
+                // on a flag that could not be resolved. Neither verdict is sound.
+                $cycleHits = $resolvedFlags->getCycleHits();
+                continue;
+            }
+
+            if (!$matches) {
                 continue;
             }
 
@@ -58,14 +86,8 @@ class Engine
 
             foreach ($segment->overrides as $overrideFeature) {
                 $featureName = $overrideFeature->name;
-                $evaluatedFeature = $evaluatedFeatures[$featureName] ?? null;
-                if ($evaluatedFeature) {
-                    $overrideWinsPriority =
-                        ($overrideFeature->priority ?? self::WEAKEST_PRIORITY) <
-                        ($evaluatedFeature->priority ?? self::WEAKEST_PRIORITY);
-                    if (!$overrideWinsPriority) {
-                        continue;
-                    }
+                if (!self::overrideWins($overrideFeature, $evaluatedFeatures[$featureName] ?? null)) {
+                    continue;
                 }
 
                 $evaluatedFeatures[$featureName] = $overrideFeature;
@@ -76,7 +98,7 @@ class Engine
         foreach ($context->features as $feature) {
             $featureName = $feature->name;
             $evaluatedFeature = $evaluatedFeatures[$featureName] ?? null;
-            $reason = 'DEFAULT';
+            $reason = self::getDefaultReason($featureName, $targetedFeatureNames);
             if ($evaluatedFeature) {
                 $feature = $evaluatedFeature;
                 $reason = "TARGETING_MATCH; segment={$matchedSegmentsByFeatureName[$featureName]->name}";
@@ -87,6 +109,24 @@ class Engine
                 $context->identity?->key,
                 $reason,
             );
+        }
+
+        if ($resolvedFlags !== null) {
+            $context->flags = null; // Frees both by reference counting, not by the cycle collector
+        }
+
+        if ($resolvedFlags?->isUsed()) {
+            // Only reached when a segment condition read a flag. Those results take
+            // precedence: they were resolved with the cycle guard, unlike the
+            // single-pass recomputation above.
+            foreach ($resolvedFlags->getResolved() as $featureName => $flag) {
+                $evaluatedFlags[$featureName] = $flag;
+            }
+            foreach ($resolvedFlags->getCyclic() as $featureName) {
+                if (isset($evaluatedFlags[$featureName])) {
+                    $evaluatedFlags[$featureName]->reason = LazyFlags::CIRCULAR_DEPENDENCY_REASON;
+                }
+            }
         }
 
         $result = new EvaluationResult();
@@ -114,11 +154,44 @@ class Engine
     }
 
     /**
+     * Whether a segment override takes precedence over the one held so far.
+     *
+     * Lower priority wins, and the first seen wins a tie, so that precedence
+     * follows context order rather than the order segments happen to be
+     * evaluated in.
+     * @internal
+     * @param FeatureContext $candidate
+     * @param ?FeatureContext $incumbent
+     * @return bool
+     */
+    public static function overrideWins($candidate, $incumbent): bool
+    {
+        return $incumbent === null
+            || ($candidate->priority ?? self::WEAKEST_PRIORITY) < ($incumbent->priority ?? self::WEAKEST_PRIORITY);
+    }
+
+    /**
+     * The reason for a flag served by its environment default.
+     *
+     * DEFAULT if any segment overrides the feature, though none matched, or
+     * STATIC if no segment overrides it.
+     * @internal
+     * @param string $featureName
+     * @param array<string, mixed> $targetedFeatureNames Keyed by the names of the features any segment overrides
+     * @return string
+     */
+    public static function getDefaultReason($featureName, $targetedFeatureNames): string
+    {
+        return isset($targetedFeatureNames[$featureName]) ? 'DEFAULT' : 'STATIC';
+    }
+
+    /**
+     * @internal
      * @param EvaluationContext $context
      * @param SegmentContext $segment
      * @return bool
      */
-    private static function isContextInSegment($context, $segment): bool
+    public static function isContextInSegment($context, $segment): bool
     {
         if (empty($segment->rules)) {
             return false;
@@ -134,14 +207,20 @@ class Engine
     }
 
     /**
+     * @internal
      * @param FeatureContext $feature
      * @param ?string $splitKey
      * @param string $reason
      * @return FlagResult
      */
-    private static function getFlagResultFromFeatureContext($feature, $splitKey, $reason = 'DEFAULT')
+    public static function getFlagResultFromFeatureContext($feature, $splitKey, $reason = 'DEFAULT')
     {
+        $variantKey = null;
+
         if ($splitKey !== null && !empty($feature->variants)) {
+            // Default to the control bucket; a matched named variant overrides this.
+            $variantKey = 'control';
+
             $hashing = new Hashing();
             $percentageValue = $hashing->getHashedPercentageForObjectIds([
                 $feature->key,
@@ -163,6 +242,7 @@ class Engine
                     $flag->name = $feature->name;
                     $flag->enabled = $feature->enabled;
                     $flag->value = $variant->value;
+                    $flag->variant = $variant->key;
                     $flag->reason = "SPLIT; weight={$variant->weight}";
                     $flag->metadata = $feature->metadata;
                     return $flag;
@@ -175,6 +255,7 @@ class Engine
         $flag->name = $feature->name;
         $flag->enabled = $feature->enabled;
         $flag->value = $feature->value;
+        $flag->variant = $variantKey;
         $flag->reason = $reason;
         $flag->metadata = $feature->metadata;
         return $flag;
@@ -377,13 +458,18 @@ class Engine
             return version_compare($contextValue, $actualVersion, $operator);
         }
 
+        $conditionValue = $cast($condition->value);
+        if ($conditionValue === null) {
+            return false;  // Not coercible to the context value type
+        }
+
         return match ($operator) {
-            '==' => $contextValue === $cast($condition->value),
-            '!=' => $contextValue !== $cast($condition->value),
-            '>' => $contextValue > $cast($condition->value),
-            '>=' => $contextValue >= $cast($condition->value),
-            '<' => $contextValue < $cast($condition->value),
-            '<=' => $contextValue <= $cast($condition->value),
+            '==' => $contextValue === $conditionValue,
+            '!=' => $contextValue !== $conditionValue,
+            '>' => $contextValue > $conditionValue,
+            '>=' => $contextValue >= $conditionValue,
+            '<' => $contextValue < $conditionValue,
+            '<=' => $contextValue <= $conditionValue,
         };
     }
 
@@ -403,9 +489,15 @@ class Engine
         }
 
         if (str_starts_with($property, '$.')) {
+            $memberNames = self::_getMemberNames($property);
+            if ($memberNames !== null) {
+                $value = self::_digMemberNames($context, $memberNames);
+                return in_array(gettype($value), self::VALID_CONTEXT_VALUE_TYPES) ? $value : null;
+            }
+
             try {
                 $jsonpath = new JSONPath($context);
-                $results = $jsonpath->find($property)->getData();
+                $results = $jsonpath->find(self::_decodeUnicodeEscapes($property))->getData();
             } catch (JSONPathException) {
                 return null;
             }
@@ -422,6 +514,55 @@ class Engine
         return null;
     }
 
+    // Decode runs of `\uXXXX` escapes, keeping escaped backslashes as written
+    private static function _decodeUnicodeEscapes(string $property): string
+    {
+        return preg_replace_callback(
+            '/\\\\\\\\|(?:\\\\u[0-9a-fA-F]{4})+/',
+            fn ($match) => $match[0] === '\\\\' ? $match[0] : json_decode("\"{$match[0]}\"") ?? $match[0],
+            $property,
+        );
+    }
+
+    /**
+     * The member names of a JSONPath made of member names only, e.g. `$.identity.identifier`, or null for any other path
+     * @param string $property
+     * @return ?array<string>
+     */
+    private static function _getMemberNames($property): ?array
+    {
+        static $memberNamesByProperty = [];
+        if (!array_key_exists($property, $memberNamesByProperty)) {
+            $memberNamesByProperty[$property] = preg_match('/^\$(\.[\p{L}\p{N}_-]+)+$/u', $property)
+                ? explode('.', substr($property, 2))
+                : null;
+        }
+        return $memberNamesByProperty[$property];
+    }
+
+    /**
+     * Read a context value by member names, as a JSONPath of member names only would
+     * @param EvaluationContext $context
+     * @param array<string> $memberNames
+     * @return ?mixed
+     */
+    private static function _digMemberNames($context, $memberNames)
+    {
+        $value = $context;
+        foreach ($memberNames as $memberName) {
+            $value = match (true) {
+                is_array($value) => $value[$memberName] ?? null,
+                $value instanceof \ArrayAccess => $value[$memberName],
+                is_object($value) => $value->$memberName ?? null,
+                default => null,
+            };
+            if ($value === null) {
+                return null;
+            }
+        }
+        return $value;
+    }
+
     /**
      * Get a condition value type caster according to a context value
      * @param mixed $contextValue
@@ -436,8 +577,8 @@ class Engine
         return match (gettype($contextValue)) {
             'boolean' => fn ($v) => !in_array($v, ['False', 'false']),
             'string' => 'strval',
-            'integer' => fn ($v) => is_numeric($v) ? (int) $v : $v,
-            'double' => fn ($v) => is_numeric($v) ? (float) $v : $v,
+            'integer' => fn ($v) => filter_var($v, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE),
+            'double' => fn ($v) => filter_var($v, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE),
         };
     }
 }

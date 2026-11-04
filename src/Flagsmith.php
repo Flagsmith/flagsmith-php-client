@@ -50,6 +50,7 @@ class Flagsmith
     private bool $useCacheAsFailover = false;
     private array $headers = [];
     private ?EvaluationContext $localEvaluationContext = null;
+    private ?EvaluationContext $environmentFlagsContext = null;
     private bool $offlineMode = false;
     private ?IOfflineHandler $offlineHandler = null;
 
@@ -81,7 +82,7 @@ class Flagsmith
         // The offline handler can be used as backup if online but the request fails
         if (!is_null($offlineHandler)) {
             $environment = $offlineHandler->getEnvironment();
-            $this->localEvaluationContext = Mappers::mapEnvironmentDocumentToContext($environment);
+            $this->setLocalEvaluationContext(Mappers::mapEnvironmentDocumentToContext($environment));
         }
 
         if (!$offlineMode) {
@@ -400,8 +401,20 @@ class Flagsmith
             ttl: $this->environmentTtl,
         );
 
-        $context = Mappers::mapEnvironmentDocumentToContext($environmentData);
+        $this->setLocalEvaluationContext(Mappers::mapEnvironmentDocumentToContext($environmentData));
+    }
+
+    /**
+     * Set the context for local evaluation, and the one environment flags are evaluated against.
+     * @param EvaluationContext $context
+     * @return void
+     */
+    private function setLocalEvaluationContext(EvaluationContext $context): void
+    {
         $this->localEvaluationContext = $context;
+
+        $this->environmentFlagsContext = clone $context;
+        $this->environmentFlagsContext->segments = Mappers::selectIdentityFreeSegments($context->segments);
     }
 
     /**
@@ -410,15 +423,11 @@ class Flagsmith
      */
     private function getEnvironmentFlagsFromLocalEvaluationContext(): Flags
     {
-        if ($this->localEvaluationContext === null) {
+        if ($this->environmentFlagsContext === null) {
             throw new FlagsmithClientError('Evaluation context is not present');
         }
 
-        // Omit segments from evaluation context for environment flags
-        $context = $this->localEvaluationContext->deepClone();
-        $context->segments = [];
-
-        $evaluationResult = Engine::getEvaluationResult($context);
+        $evaluationResult = Engine::getEvaluationResult($this->environmentFlagsContext);
 
         return Flags::fromEvaluationResult(
             $evaluationResult,

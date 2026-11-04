@@ -25,6 +25,14 @@ function createClient(string $environmentKey, string $apiUrl): Flagsmith
     return new Flagsmith(apiKey: $environmentKey, host: $apiUrl);
 }
 
+// Create the SDK client with local evaluation
+function createClientWithLocalEvaluation(string $environmentKey, string $apiUrl): Flagsmith
+{
+    $flagsmith = new Flagsmith(apiKey: $environmentKey, host: $apiUrl, environmentTtl: 60);
+    $flagsmith->updateEnvironment();
+    return $flagsmith;
+}
+
 // When the application gets the environment flags
 function getEnvironmentFlags(Flagsmith $flagsmith): array
 {

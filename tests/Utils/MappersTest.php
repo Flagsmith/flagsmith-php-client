@@ -56,7 +56,7 @@ class MappersTest extends TestCase
 
         $this->assertEquals(SegmentRuleType::ALL, $context->segments[$overrideKey]->rules[0]->type);
         $this->assertCount(1, $context->segments[$overrideKey]->rules[0]->conditions);
-        $this->assertNull($context->segments[$overrideKey]->rules[0]->rules);
+        $this->assertEmpty($context->segments[$overrideKey]->rules[0]->rules);
 
         $this->assertEquals('$.identity.identifier', $context->segments[$overrideKey]->rules[0]->conditions[0]->property);
         $this->assertEquals(SegmentConditionOperator::IN, $context->segments[$overrideKey]->rules[0]->conditions[0]->operator);
@@ -168,6 +168,41 @@ class MappersTest extends TestCase
         $this->assertTrue($segment->overrides[1]->enabled);
         $this->assertEquals('zeta-value', $segment->overrides[1]->value);
         $this->assertEquals(['id' => 2], $segment->overrides[1]->metadata);
+    }
+
+    public function testSelectIdentityFreeSegmentsKeepsOnlySegmentsEvaluableWithoutAnIdentity(): void
+    {
+        // Given
+        $context = EvaluationContext::fromJsonObject(json_decode(<<<'JSON'
+            {
+                "environment": {"key": "key", "name": "Production"},
+                "segments": {
+                    "on_environment": {"key": "on_environment", "name": "on_environment", "rules": [
+                        {"type": "ALL", "conditions": [{"property": "$.environment.name", "operator": "EQUAL", "value": "Production"}]}
+                    ]},
+                    "on_flag": {"key": "on_flag", "name": "on_flag", "rules": [
+                        {"type": "ANY", "conditions": [{"property": "$.flags['payments'].enabled", "operator": "NOT_EQUAL", "value": "true"}]}
+                    ]},
+                    "on_nested_trait": {"key": "on_nested_trait", "name": "on_nested_trait", "rules": [
+                        {"type": "ALL", "conditions": [], "rules": [
+                            {"type": "ANY", "conditions": [{"property": "plan", "operator": "IS_NOT_SET", "value": null}]}
+                        ]}
+                    ]},
+                    "on_identifier": {"key": "on_identifier", "name": "on_identifier", "rules": [
+                        {"type": "ALL", "conditions": [{"property": "$.identity.identifier", "operator": "IN", "value": ["user-1"]}]}
+                    ]},
+                    "on_identity_split": {"key": "on_identity_split", "name": "on_identity_split", "rules": [
+                        {"type": "ALL", "conditions": [{"property": null, "operator": "PERCENTAGE_SPLIT", "value": "50"}]}
+                    ]}
+                }
+            }
+            JSON));
+
+        // When
+        $identityFreeSegments = Mappers::selectIdentityFreeSegments($context->segments);
+
+        // Then
+        $this->assertEquals(['on_environment', 'on_flag'], array_keys($identityFreeSegments));
     }
 
     private static function _identityFeatureState(int $featureId, string $featureName, bool $enabled, string $value): object

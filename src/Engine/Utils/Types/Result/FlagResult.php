@@ -14,6 +14,9 @@ class FlagResult implements \JsonSerializable
     public $value;
 
     /** @var ?string */
+    public $variant;
+
+    /** @var ?string */
     public $reason;
 
     /** @var ?array<string,mixed> */
