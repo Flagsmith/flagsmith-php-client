@@ -492,7 +492,7 @@ class Engine
 
             try {
                 $jsonpath = new JSONPath($context);
-                $results = $jsonpath->find($property)->getData();
+                $results = $jsonpath->find(self::_decodeUnicodeEscapes($property))->getData();
             } catch (JSONPathException) {
                 return null;
             }
@@ -507,6 +507,16 @@ class Engine
         }
 
         return null;
+    }
+
+    // Decode runs of `\uXXXX` escapes, keeping escaped backslashes as written
+    private static function _decodeUnicodeEscapes(string $property): string
+    {
+        return preg_replace_callback(
+            '/\\\\\\\\|(?:\\\\u[0-9a-fA-F]{4})+/',
+            fn ($match) => $match[0] === '\\\\' ? $match[0] : json_decode("\"{$match[0]}\"") ?? $match[0],
+            $property,
+        );
     }
 
     /**
