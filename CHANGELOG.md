@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.3.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.2.0...v5.3.0) (2026-11-09)
+
+
+### Features
+
+* Support `getExperimentFlag`, `trackEvent` and `trackExposure` methods ([#156](https://github.com/Flagsmith/flagsmith-php-client/issues/156)) ([42b3fff](https://github.com/Flagsmith/flagsmith-php-client/commit/42b3fff95f28b65f37dd77583695a74c28863b69))
+
+
+### Other
+
+* Let Renovate keep updating spec bumps the webhook handler commits to ([#153](https://github.com/Flagsmith/flagsmith-php-client/issues/153)) ([faddb16](https://github.com/Flagsmith/flagsmith-php-client/commit/faddb164a02f895f744d9752ee1c293c63c53283))
+
 ## [5.2.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.1.2...v5.2.0) (2026-11-04)
 
 
