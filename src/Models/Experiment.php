@@ -5,7 +5,7 @@ namespace Flagsmith\Models;
 use Flagsmith\Concerns\HasWith;
 
 /**
- * The running experiment a flag was evaluated under. Only remote identity evaluations carry it.
+ * The running experiment a flag was evaluated under. Only identity evaluations carry it.
  */
 class Experiment
 {

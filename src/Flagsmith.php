@@ -479,6 +479,17 @@ class Flagsmith
     }
 
     /**
+     * Send all buffered events, giving up after `$timeoutSeconds`, and stop tracking events. Call it
+     * before the application stops so that its events are not lost. Never fails the application.
+     * @param float $timeoutSeconds
+     * @return void
+     */
+    public function close(float $timeoutSeconds = 5): void
+    {
+        $this->eventProcessor?->close($timeoutSeconds);
+    }
+
+    /**
      * Get a list of segments that the given identity is in.
      * @param string $identifier a unique identifier for the identity in the current
      *      environment , e.g. email address, username, uuid
@@ -597,6 +608,7 @@ class Flagsmith
             $evaluationResult,
             analyticsProcessor: $this->analyticsProcessor,
             defaultFlagHandler: $this->defaultFlagHandler,
+            identityEvaluation: true,
         );
     }
 
