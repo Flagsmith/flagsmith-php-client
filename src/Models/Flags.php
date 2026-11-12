@@ -101,7 +101,7 @@ class Flags
             $flag->enabled = $flagResult->enabled;
             $flag->value = $flagResult->value;
             $flag->variant = $flagResult->variant;
-            if ($identityEvaluation) {
+            if ($identityEvaluation && isset($flagResult->metadata['experiment'])) {
                 // Only an identity is enrolled in an experiment
                 $flag->experiment = Experiment::fromApiMetadata((object) $flagResult->metadata);
             }
