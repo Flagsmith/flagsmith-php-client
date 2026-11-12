@@ -5,6 +5,10 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Psr18Client as SymfonyPsr18Client;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientInterface;
 
@@ -154,7 +158,7 @@ class EventProcessorTest extends TestCase
         $this->assertEquals(['treatment', 'control', 'treatment'], array_column($events, 'value'));
     }
 
-    public function testAFullBufferDropsItsOldestEvent()
+    public function testTrackingAnEventIntoAFullBufferSendsIt()
     {
         // Given
         $processor = $this->processor($this->scriptedEventsApiClient([]), maxBuffer: 2);
@@ -166,7 +170,23 @@ class EventProcessorTest extends TestCase
         $processor->flush();
 
         // Then
-        $this->assertEquals([['second', 'third']], $this->sentBatches());
+        $this->assertEquals([['first', 'second'], ['third']], $this->sentBatches());
+    }
+
+    public function testAFullBufferThatFailsToSendDropsItsOldestEventAfterOneAttempt()
+    {
+        // Given
+        $processor = $this->processor($this->scriptedEventsApiClient([503]), maxBuffer: 2);
+
+        // When
+        $processor->trackEvent('first');
+        $processor->trackEvent('second');
+        $processor->trackEvent('third');
+        $processor->flush();
+
+        // Then
+        $this->assertEquals([['first', 'second'], ['second', 'third']], $this->sentBatches());
+        $this->assertEmpty($this->waits);
     }
 
     public function testAFullBufferDropsTheOldestEventOfAKeptBatch()
@@ -189,8 +209,9 @@ class EventProcessorTest extends TestCase
     public function testADroppedExposureCanBeTrackedAgain()
     {
         // Given
-        $processor = $this->processor($this->scriptedEventsApiClient([]), maxBuffer: 1);
+        $processor = $this->processor($this->scriptedEventsApiClient([503, 503, 503]), maxBuffer: 1);
         $processor->trackExposureEvent('banner', 'user_123', 'treatment');
+        $processor->flush();
         $processor->trackEvent('checkout');
 
         // When
@@ -198,7 +219,8 @@ class EventProcessorTest extends TestCase
         $processor->flush();
 
         // Then
-        $this->assertEquals([['$flag_exposure']], $this->sentBatches());
+        $batches = $this->sentBatches();
+        $this->assertEquals([['checkout'], ['$flag_exposure']], array_slice($batches, -2));
     }
 
     public function testEventsAreSentOnceTheFlushIntervalHasElapsed()
@@ -224,6 +246,41 @@ class EventProcessorTest extends TestCase
 
         // Then
         $this->assertEquals(['first'], array_column($this->sentEvents(), 'event'));
+    }
+
+    public function testDestroyingTheProcessorMakesASingleAttempt()
+    {
+        // Given
+        $processor = $this->processor($this->eventsApiClient($this->connectionFailure()));
+        $processor->trackEvent('first');
+
+        // When
+        unset($processor);
+
+        // Then
+        $this->assertCount(1, $this->requests);
+        $this->assertEmpty($this->waits);
+    }
+
+    public function testAFlushOnceTheFlushIntervalHasElapsedMakesASingleAttempt()
+    {
+        // Given
+        $processor = new EventProcessor(
+            'env-key',
+            flushIntervalSeconds: 0,
+            client: $this->eventsApiClient($this->connectionFailure()),
+            sleep: function (float $seconds) {
+                $this->waits[] = $seconds;
+            },
+        );
+
+        // When
+        $processor->trackEvent('first');
+
+        // Then
+        $this->assertCount(1, $this->requests);
+        $this->assertEmpty($this->waits);
+        $this->assertEquals(['first'], array_column($processor->events, 'event'));
     }
 
     public function testNothingIsSentWithoutEvents()
@@ -385,6 +442,53 @@ class EventProcessorTest extends TestCase
 
         // When / Then
         $processor->flush();
+    }
+
+    public function testASymfonyClientTimesOutEachRequest()
+    {
+        // Given
+        $options = [];
+        $client = new SymfonyPsr18Client(new MockHttpClient(function ($method, $url, $requestOptions) use (&$options) {
+            $options[] = $requestOptions;
+            return new MockResponse('', ['http_code' => 202]);
+        }));
+        $processor = $this->processor($client);
+        $processor->trackEvent('checkout');
+
+        // When
+        $processor->flush();
+
+        // Then
+        $this->assertCount(1, $options);
+        $this->assertEquals(EventProcessor::REQUEST_TIMEOUT_SECONDS, $options[0]['timeout']);
+        $this->assertEquals(EventProcessor::REQUEST_TIMEOUT_SECONDS, $options[0]['max_duration']);
+    }
+
+    public static function httpClientsProvider(): array
+    {
+        return [
+            'Guzzle' => [fn () => new GuzzleClient()],
+            'Symfony' => [fn () => new SymfonyPsr18Client(HttpClient::create())],
+        ];
+    }
+
+    /**
+     * @dataProvider httpClientsProvider
+     */
+    public function testCloseReturnsWithinItsTimeoutFromAnEventsApiThatNeverAnswers(\Closure $createClient)
+    {
+        // Given an events API accepting connections, but never answering
+        $server = stream_socket_server('tcp://127.0.0.1:0');
+        $processor = new EventProcessor('env-key', 'http://' . stream_socket_get_name($server, false) . '/', client: $createClient());
+        $processor->trackEvent('checkout');
+        $started = microtime(true);
+
+        // When
+        $processor->close(0.5);
+
+        // Then
+        $this->assertLessThan(1.5, microtime(true) - $started);
+        fclose($server);
     }
 
     public function testCloseSendsTheBufferedEventsRetriesIncluded()

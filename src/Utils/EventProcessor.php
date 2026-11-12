@@ -12,21 +12,26 @@ use Psr\Http\Message\StreamFactoryInterface;
 /**
  * EventProcessor buffers tracking and exposure events, and posts them to the Flagsmith events API.
  *
- * PHP has no background timer, so buffered events are sent when the processor is destroyed (e.g. at
- * the end of a request), when `flush()` or `close()` is called, or when an event is tracked after the
- * flush interval has elapsed. The buffer holds at most `$maxBuffer` events: a full buffer drops its
- * oldest event.
+ * PHP has no background timer, so buffered events are sent when `flush()` or `close()` is called, and
+ * automatically: when the processor is destroyed (e.g. at the end of a request), when an event is
+ * tracked after the flush interval has elapsed, and when an event is tracked into a full buffer.
  *
  * Recording an event never fails the calling application. A flush sends the buffered events in one
- * request, retrying transient failures (a connection error, a timeout, 408, 429 or a 5xx) up to
- * `MAX_ATTEMPTS` times, backing off from 1 second, doubling, with full jitter. A batch whose last
- * attempt failed transiently is kept, ahead of newer events, for the next flush, unless that attempt
- * got a 500. A batch the events API rejects otherwise is dropped, and a 401 or 403 stops event
- * tracking altogether.
+ * request. `flush()` and `close()` retry transient failures (a connection error, a timeout, 408, 429
+ * or a 5xx) up to `MAX_ATTEMPTS` times, backing off from 1 second, doubling, with full jitter. An
+ * automatic flush makes a single attempt, not to hold up the application's request while the events
+ * API is down. A batch whose last attempt failed transiently is kept, ahead of newer events, for the
+ * next flush, unless that attempt got a 500. A batch the events API rejects otherwise is dropped, and
+ * a 401 or 403 stops event tracking altogether.
  *
- * Each request times out after `REQUEST_TIMEOUT_SECONDS` with a Guzzle client, such as the one
- * discovered by default. PSR-18 has no per-request timeout, so with another client a request waits as
- * long as that client allows: configure it with a short timeout to bound flushing.
+ * The buffer holds at most `$maxBuffer` events. Tracking an event into a full buffer flushes it, unless
+ * it holds a batch that failed to send: then its oldest event is dropped, so that an events API outage
+ * cannot hold up every tracked event.
+ *
+ * Each request times out after `REQUEST_TIMEOUT_SECONDS`, or by the deadline of `close()`, with a
+ * Guzzle client (the one discovered by default when installed) or Symfony's `Psr18Client` (6.2 and
+ * later). PSR-18 has no per-request timeout, so with another client a request waits as long as that
+ * client allows: configure it with a short timeout to bound flushing.
  */
 class EventProcessor
 {
@@ -53,6 +58,8 @@ class EventProcessor
     public array $events = [];
     /** @var array<string, true> */
     private array $bufferedExposures = [];
+    /** How many of the oldest buffered events are a batch that failed to send. */
+    private int $heldEvents = 0;
     /** Whether the events API refused the environment key, or the processor was closed. */
     private bool $stopped = false;
     private ClientInterface $client;
@@ -87,7 +94,7 @@ class EventProcessor
 
     public function __destruct()
     {
-        $this->flush();
+        $this->send(null, 1);
     }
 
     /**
@@ -134,7 +141,7 @@ class EventProcessor
      */
     public function flush(): void
     {
-        $this->send(null);
+        $this->send(null, self::MAX_ATTEMPTS);
     }
 
     /**
@@ -144,15 +151,16 @@ class EventProcessor
      */
     public function close(float $timeoutSeconds): void
     {
-        $this->send(microtime(true) + $timeoutSeconds);
+        $this->send(microtime(true) + $timeoutSeconds, self::MAX_ATTEMPTS);
         $this->stop();
     }
 
     /**
      * @param float|null $deadline the time to give up by, from `microtime(true)`, or null for none
+     * @param int $maxAttempts
      * @return void
      */
-    private function send(?float $deadline): void
+    private function send(?float $deadline, int $maxAttempts): void
     {
         $this->lastFlushed = time();
         if ($this->stopped || empty($this->events)) {
@@ -175,7 +183,7 @@ class EventProcessor
             ->withBody($body);
 
         $status = null;
-        for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             if ($attempt > 1) {
                 // Full jitter: any wait up to the backoff
                 $backoff = self::RETRY_BACKOFF_SECONDS * 2 ** ($attempt - 2);
@@ -211,8 +219,10 @@ class EventProcessor
 
         if ($status === self::DROPPING_SERVER_ERROR) {
             $this->clear();
+            return;
         }
         // Otherwise the batch stays buffered, ahead of newer events, for the next flush.
+        $this->heldEvents = count($this->events);
     }
 
     /**
@@ -226,6 +236,14 @@ class EventProcessor
         try {
             if ($this->client instanceof \GuzzleHttp\ClientInterface) {
                 $response = $this->client->send($request, ['timeout' => $timeoutSeconds, 'http_errors' => false]);
+            } elseif (
+                $this->client instanceof \Symfony\Component\HttpClient\Psr18Client
+                && method_exists($this->client, 'withOptions')
+            ) {
+                // `timeout` is how long the connection may idle, `max_duration` how long the request may take
+                $response = $this->client
+                    ->withOptions(['timeout' => $timeoutSeconds, 'max_duration' => $timeoutSeconds])
+                    ->sendRequest($request);
             } else {
                 $response = $this->client->sendRequest($request);
             }
@@ -244,6 +262,7 @@ class EventProcessor
     {
         $this->events = [];
         $this->bufferedExposures = [];
+        $this->heldEvents = 0;
     }
 
     private function stop(): void
@@ -277,21 +296,25 @@ class EventProcessor
         ];
 
         $exposure = self::exposureKey($bufferedEvent);
-        if (!is_null($exposure)) {
-            if (isset($this->bufferedExposures[$exposure])) {
-                return;
-            }
-            $this->bufferedExposures[$exposure] = true;
+        if (!is_null($exposure) && isset($this->bufferedExposures[$exposure])) {
+            return;
         }
 
-        $this->events[] = $bufferedEvent;
-        while (count($this->events) > $this->maxBuffer) {
+        if (count($this->events) >= $this->maxBuffer && $this->heldEvents === 0) {
+            $this->send(null, 1);
+        }
+        while (!empty($this->events) && count($this->events) >= $this->maxBuffer) {
             $dropped = array_shift($this->events);
+            $this->heldEvents = max(0, $this->heldEvents - 1);
             unset($this->bufferedExposures[self::exposureKey($dropped) ?? '']);
         }
+        if (!is_null($exposure)) {
+            $this->bufferedExposures[$exposure] = true;
+        }
+        $this->events[] = $bufferedEvent;
 
         if ((time() - $this->lastFlushed) >= $this->flushIntervalSeconds) {
-            $this->flush();
+            $this->send(null, 1);
         }
     }
 
