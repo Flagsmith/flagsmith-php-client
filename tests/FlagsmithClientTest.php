@@ -606,6 +606,125 @@ class FlagsmithClientTest extends TestCase
         $this->assertEmpty($events);
     }
 
+    private function localEvaluationWithExperimentsClient(): ClientInterface
+    {
+        $handlerBuilder = ClientFixtures::getHandlerBuilder();
+        $handlerBuilder->addRoute(
+            ClientFixtures::getRouteBuilder()->new()
+                ->withMethod('GET')
+                ->withPath('/api/v1/environment-document/')
+                ->withFileResponse(__DIR__ . '/Data/environment_with_experiments.json')
+                ->build()
+        );
+
+        return ClientFixtures::getMockClient($handlerBuilder, false);
+    }
+
+    public static function localExperimentFlagsProvider(): array
+    {
+        return [
+            'identity served the variant' => ['checkout', 'new checkout', 'treatment', 41],
+            'identity served no variant is in control' => ['banner', 'control', 'control', 42],
+        ];
+    }
+
+    /**
+     * @dataProvider localExperimentFlagsProvider
+     */
+    public function testGetExperimentFlagRecordsTheExposureOfAnIdentityInAnExperimentWithLocalEvaluation(
+        string $featureName,
+        string $value,
+        string $variant,
+        int $experimentId
+    ) {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 60))
+            ->withClient($this->localEvaluationWithExperimentsClient())
+            ->withEventProcessor(new EventProcessor('ser.api_key', client: $this->eventsApiClient($events)));
+        $flagsmith->updateEnvironment();
+
+        // When
+        $flag = $flagsmith->getExperimentFlag($featureName, 'user_123', (object) ['plan' => 'premium']);
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertEquals($value, $flag->getValue());
+        $this->assertEquals($variant, $flag->getVariant());
+        $this->assertEquals($experimentId, $flag->getExperiment()->getId());
+        $this->assertEquals("{$featureName} experiment", $flag->getExperiment()->getName());
+        $this->assertTrue($flag->getExperiment()->getInExperiment());
+        $this->assertCount(1, $events);
+        $this->assertEquals('$flag_exposure', $events[0]['event']);
+        $this->assertEquals($featureName, $events[0]['feature_name']);
+        $this->assertEquals('user_123', $events[0]['identifier']);
+        $this->assertEquals($variant, $events[0]['value']);
+        $this->assertEquals(['plan' => 'premium'], $events[0]['traits']);
+        $this->assertEquals($experimentId, $events[0]['metadata']['experiment_id']);
+    }
+
+    public function testGetExperimentFlagDoesNotRecordAnExposureOfAnIdentityAnExperimentDoesNotEnrollWithLocalEvaluation()
+    {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 60))
+            ->withClient($this->localEvaluationWithExperimentsClient())
+            ->withEventProcessor(new EventProcessor('ser.api_key', client: $this->eventsApiClient($events)));
+        $flagsmith->updateEnvironment();
+
+        // When
+        $flag = $flagsmith->getExperimentFlag('footer', 'user_123');
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertEquals('control', $flag->getValue());
+        $this->assertFalse($flag->getExperiment()->getInExperiment());
+        $this->assertEmpty($events);
+    }
+
+    public function testEnvironmentFlagsCarryNoExperimentWithLocalEvaluation()
+    {
+        // Given
+        $flagsmith = (new Flagsmith('ser.api_key', environmentTtl: 60))
+            ->withClient($this->localEvaluationWithExperimentsClient());
+        $flagsmith->updateEnvironment();
+
+        // When
+        $flag = $flagsmith->getEnvironmentFlags()->getFlag('checkout');
+
+        // Then
+        $this->assertEquals('control', $flag->getValue());
+        $this->assertNull($flag->getVariant());
+        $this->assertNull($flag->getExperiment());
+    }
+
+    public function testCloseSendsTheBufferedEventsAndStopsTrackingEvents()
+    {
+        // Given
+        $events = [];
+        $flagsmith = (new Flagsmith('api_key'))
+            ->withEventProcessor(new EventProcessor('api_key', client: $this->eventsApiClient($events)));
+        $flagsmith->trackEvent('checkout_completed', 'user_123');
+
+        // When
+        $flagsmith->close(1);
+        $flagsmith->trackEvent('signed_up', 'user_123');
+        $flagsmith->flushEvents();
+
+        // Then
+        $this->assertEquals(['checkout_completed'], array_column($events, 'event'));
+    }
+
+    public function testCloseDoesNothingWithoutEvents()
+    {
+        // Given
+        $flagsmith = new Flagsmith('api_key');
+
+        // When / Then
+        $flagsmith->close();
+        $this->addToAssertionCount(1);
+    }
+
     public function testTrackEventSendsTheEventWithTraitValues()
     {
         // Given

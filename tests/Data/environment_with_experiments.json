@@ -1,0 +1,272 @@
+{
+  "api_key": "B62qaMZNwfiqT76p38ggrQ",
+  "name": "Test environment",
+  "project": {
+    "name": "Test project",
+    "organisation": {
+      "feature_analytics": false,
+      "name": "Test Org",
+      "id": 1,
+      "persist_trait_data": true,
+      "stop_serving_flags": false
+    },
+    "id": 1,
+    "hide_disabled_flags": false,
+    "segments": [
+      {
+        "id": 1,
+        "name": "experiment-41-rollout",
+        "rules": [
+          {
+            "type": "ALL",
+            "rules": [],
+            "conditions": [
+              {
+                "operator": "PERCENTAGE_SPLIT",
+                "value": "100.0",
+                "property_": "$.identity.key"
+              }
+            ]
+          }
+        ],
+        "feature_states": [
+          {
+            "feature": {
+              "id": 1,
+              "name": "checkout",
+              "type": "MULTIVARIATE"
+            },
+            "enabled": true,
+            "django_id": 11,
+            "feature_segment": {
+              "priority": 0
+            },
+            "featurestate_uuid": "00000000-0000-0000-0002-000000000001",
+            "feature_state_value": "control",
+            "multivariate_feature_state_values": [
+              {
+                "multivariate_feature_option": {
+                  "value": "new checkout",
+                  "id": 1,
+                  "key": "treatment"
+                },
+                "percentage_allocation": 100.0,
+                "id": 11,
+                "mv_fs_value_uuid": "00000000-0000-0000-0003-000000000001"
+              }
+            ],
+            "metadata": {
+              "experiment": {
+                "id": 41,
+                "name": "checkout experiment",
+                "in_experiment": true
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "experiment-42-rollout",
+        "rules": [
+          {
+            "type": "ALL",
+            "rules": [],
+            "conditions": [
+              {
+                "operator": "PERCENTAGE_SPLIT",
+                "value": "100.0",
+                "property_": "$.identity.key"
+              }
+            ]
+          }
+        ],
+        "feature_states": [
+          {
+            "feature": {
+              "id": 2,
+              "name": "banner",
+              "type": "MULTIVARIATE"
+            },
+            "enabled": true,
+            "django_id": 12,
+            "feature_segment": {
+              "priority": 0
+            },
+            "featurestate_uuid": "00000000-0000-0000-0002-000000000002",
+            "feature_state_value": "control",
+            "multivariate_feature_state_values": [
+              {
+                "multivariate_feature_option": {
+                  "value": "new banner",
+                  "id": 2,
+                  "key": "treatment"
+                },
+                "percentage_allocation": 0.0,
+                "id": 12,
+                "mv_fs_value_uuid": "00000000-0000-0000-0003-000000000002"
+              }
+            ],
+            "metadata": {
+              "experiment": {
+                "id": 42,
+                "name": "banner experiment",
+                "in_experiment": true
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "experiment-43-rollout",
+        "rules": [
+          {
+            "type": "ALL",
+            "rules": [],
+            "conditions": [
+              {
+                "operator": "PERCENTAGE_SPLIT",
+                "value": "0.0",
+                "property_": "$.identity.key"
+              }
+            ]
+          }
+        ],
+        "feature_states": [
+          {
+            "feature": {
+              "id": 3,
+              "name": "footer",
+              "type": "MULTIVARIATE"
+            },
+            "enabled": true,
+            "django_id": 13,
+            "feature_segment": {
+              "priority": 0
+            },
+            "featurestate_uuid": "00000000-0000-0000-0002-000000000003",
+            "feature_state_value": "control",
+            "multivariate_feature_state_values": [
+              {
+                "multivariate_feature_option": {
+                  "value": "new footer",
+                  "id": 3,
+                  "key": "treatment"
+                },
+                "percentage_allocation": 100.0,
+                "id": 13,
+                "mv_fs_value_uuid": "00000000-0000-0000-0003-000000000003"
+              }
+            ],
+            "metadata": {
+              "experiment": {
+                "id": 43,
+                "name": "footer experiment",
+                "in_experiment": true
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "segment_overrides": [],
+  "id": 1,
+  "feature_states": [
+    {
+      "feature": {
+        "id": 1,
+        "name": "checkout",
+        "type": "MULTIVARIATE"
+      },
+      "enabled": true,
+      "django_id": 1,
+      "feature_segment": null,
+      "featurestate_uuid": "00000000-0000-0000-0000-000000000001",
+      "feature_state_value": "control",
+      "multivariate_feature_state_values": [
+        {
+          "multivariate_feature_option": {
+            "value": "new checkout",
+            "id": 1,
+            "key": "treatment"
+          },
+          "percentage_allocation": 0.0,
+          "id": 1,
+          "mv_fs_value_uuid": "00000000-0000-0000-0001-000000000001"
+        }
+      ],
+      "metadata": {
+        "experiment": {
+          "id": 41,
+          "name": "checkout experiment",
+          "in_experiment": false
+        }
+      }
+    },
+    {
+      "feature": {
+        "id": 2,
+        "name": "banner",
+        "type": "MULTIVARIATE"
+      },
+      "enabled": true,
+      "django_id": 2,
+      "feature_segment": null,
+      "featurestate_uuid": "00000000-0000-0000-0000-000000000002",
+      "feature_state_value": "control",
+      "multivariate_feature_state_values": [
+        {
+          "multivariate_feature_option": {
+            "value": "new banner",
+            "id": 2,
+            "key": "treatment"
+          },
+          "percentage_allocation": 0.0,
+          "id": 2,
+          "mv_fs_value_uuid": "00000000-0000-0000-0001-000000000002"
+        }
+      ],
+      "metadata": {
+        "experiment": {
+          "id": 42,
+          "name": "banner experiment",
+          "in_experiment": false
+        }
+      }
+    },
+    {
+      "feature": {
+        "id": 3,
+        "name": "footer",
+        "type": "MULTIVARIATE"
+      },
+      "enabled": true,
+      "django_id": 3,
+      "feature_segment": null,
+      "featurestate_uuid": "00000000-0000-0000-0000-000000000003",
+      "feature_state_value": "control",
+      "multivariate_feature_state_values": [
+        {
+          "multivariate_feature_option": {
+            "value": "new footer",
+            "id": 3,
+            "key": "treatment"
+          },
+          "percentage_allocation": 0.0,
+          "id": 3,
+          "mv_fs_value_uuid": "00000000-0000-0000-0001-000000000003"
+        }
+      ],
+      "metadata": {
+        "experiment": {
+          "id": 43,
+          "name": "footer experiment",
+          "in_experiment": false
+        }
+      }
+    }
+  ],
+  "identity_overrides": []
+}

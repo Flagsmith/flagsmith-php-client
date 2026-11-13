@@ -84,12 +84,14 @@ class Flags
      * @param EvaluationResult $evaluationResult
      * @param ?AnalyticsProcessor $analyticsProcessor
      * @param ?\Closure $defaultFlagHandler
+     * @param bool $identityEvaluation whether the result is an identity's, which carries its experiments
      * @return void
      */
     public static function fromEvaluationResult(
         $evaluationResult,
         ?AnalyticsProcessor $analyticsProcessor,
         ?\Closure $defaultFlagHandler,
+        bool $identityEvaluation = false,
     ): Flags {
         $flags = [];
         foreach ($evaluationResult->flags as $flagResult) {
@@ -98,6 +100,11 @@ class Flags
             $flag->feature_id = $flagResult->metadata['id'];
             $flag->enabled = $flagResult->enabled;
             $flag->value = $flagResult->value;
+            $flag->variant = $flagResult->variant;
+            if ($identityEvaluation && isset($flagResult->metadata['experiment'])) {
+                // Only an identity is enrolled in an experiment
+                $flag->experiment = Experiment::fromApiMetadata((object) $flagResult->metadata);
+            }
             $flags[$flagResult->name] = $flag;
         }
 

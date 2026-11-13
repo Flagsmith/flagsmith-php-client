@@ -162,12 +162,18 @@ class Mappers
             $feature->value = $featureState->feature_state_value;
             $feature->priority = $featureState->feature_segment?->priority ?? null;
             $feature->metadata = ['id' => $featureState->feature->id];
+            if (isset($featureState->metadata->experiment)) {
+                // The running experiment the feature state belongs to: an experiment's rollout segment
+                // overrides the feature with an enrolled one
+                $feature->metadata['experiment'] = $featureState->metadata->experiment;
+            }
             $feature->variants = [];
             $multivariateFeatureStateValues = ((array) $featureState->multivariate_feature_state_values) ?? [];
             $multivariateFeatureStateValueUUIDs = array_column($multivariateFeatureStateValues, 'mv_fs_value_uuid');
             sort($multivariateFeatureStateValueUUIDs);  // For historical consistency
             foreach ($multivariateFeatureStateValues as $multivariateFeatureStateValue) {
                 $variant = new FeatureValue();
+                $variant->key = $multivariateFeatureStateValue->multivariate_feature_option->key ?? null;
                 $variant->value = $multivariateFeatureStateValue->multivariate_feature_option->value;
                 $variant->weight = $multivariateFeatureStateValue->percentage_allocation;
                 $variant->priority = $multivariateFeatureStateValue->id

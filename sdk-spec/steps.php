@@ -42,6 +42,14 @@ function createClientWithEvents(string $environmentKey, string $apiUrl, string $
     return new Flagsmith(apiKey: $environmentKey, host: $apiUrl, enableEvents: true, eventsApiUrl: $eventsApiUrl);
 }
 
+// Create the SDK client with local evaluation and events enabled
+function createClientWithLocalEvaluationAndEvents(string $environmentKey, string $apiUrl, string $eventsApiUrl): Flagsmith
+{
+    $flagsmith = new Flagsmith(apiKey: $environmentKey, host: $apiUrl, environmentTtl: 60, enableEvents: true, eventsApiUrl: $eventsApiUrl);
+    $flagsmith->updateEnvironment();
+    return $flagsmith;
+}
+
 // When the application gets the environment flags
 function getEnvironmentFlags(Flagsmith $flagsmith): array
 {
@@ -75,4 +83,25 @@ function trackExposureEvent(Flagsmith $flagsmith, string $feature, string $ident
 {
     $flagsmith->trackExposureEvent($feature, identifier: $identifier, value: $value, metadata: $metadata);
     $flagsmith->flushEvents(); // Events are sent when a PHP request ends, which the harness's long-lived process never does.
+}
+
+// When the application tracks events "event_{first}" to "event_{last}" for identity "{identifier}"
+function trackEvents(Flagsmith $flagsmith, int $first, int $last, string $identifier): void
+{
+    // Tracked in one go, then sent when the application flushes events.
+    for ($number = $first; $number <= $last; $number++) {
+        $flagsmith->trackEvent("event_{$number}", identifier: $identifier);
+    }
+}
+
+// When the application flushes events
+function flushEvents(Flagsmith $flagsmith): void
+{
+    $flagsmith->flushEvents();
+}
+
+// When the application closes the client with a timeout of {timeout} seconds
+function closeClient(Flagsmith $flagsmith, int|float $timeout): void
+{
+    $flagsmith->close($timeout);
 }
