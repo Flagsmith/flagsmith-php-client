@@ -17,8 +17,8 @@ use Psr\Http\Message\StreamFactoryInterface;
  * tracked after the flush interval has elapsed, and when an event is tracked into a full buffer.
  *
  * Recording an event never fails the calling application. A flush sends the buffered events in one
- * request. `flush()` and `close()` retry transient failures (a connection error, a timeout, 408, 429
- * or a 5xx) up to `MAX_ATTEMPTS` times, backing off from 1 second, doubling, with full jitter. An
+ * request. `flush()` and `close()` retry transient failures (a connection error, a timeout, 408, 429,
+ * 500, 502, 503 or 504) up to `MAX_ATTEMPTS` times, backing off from 1 second, doubling, with full jitter. An
  * automatic flush makes a single attempt, not to hold up the application's request while the events
  * API is down. A batch whose last attempt failed transiently is kept, ahead of newer events, for the
  * next flush, unless that attempt got a 500. A batch the events API rejects otherwise is dropped, and
@@ -44,7 +44,7 @@ class EventProcessor
     public const MAX_ATTEMPTS = 3;
     public const REQUEST_TIMEOUT_SECONDS = 3;
     public const RETRY_BACKOFF_SECONDS = 1;
-    private const RETRIED_STATUSES = [408, 429];
+    private const RETRIED_STATUSES = [408, 429, 500, 502, 503, 504];
     private const STOPPING_STATUSES = [401, 403];
     /** A batch whose last attempt got this status is dropped rather than kept, not to send it forever. */
     private const DROPPING_SERVER_ERROR = 500;
@@ -146,6 +146,8 @@ class EventProcessor
 
     /**
      * Post all buffered events, giving up once `$timeoutSeconds` have elapsed, and stop tracking events.
+     * Neither a retry nor a backoff starts after the deadline, but with an HTTP client other than Guzzle
+     * or Symfony's a request already sent can outlast it, until that client's own timeout.
      * @param float $timeoutSeconds
      * @return void
      */
@@ -255,7 +257,7 @@ class EventProcessor
 
     private static function isTransient(?int $status): bool
     {
-        return $status === null || $status >= 500 || in_array($status, self::RETRIED_STATUSES, true);
+        return $status === null || in_array($status, self::RETRIED_STATUSES, true);
     }
 
     private function clear(): void

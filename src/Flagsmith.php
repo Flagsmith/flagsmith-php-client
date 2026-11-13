@@ -481,6 +481,8 @@ class Flagsmith
     /**
      * Send all buffered events, giving up after `$timeoutSeconds`, and stop tracking events. Call it
      * before the application stops so that its events are not lost. Never fails the application.
+     * With an HTTP client other than Guzzle or Symfony's, a request already sent when the timeout
+     * elapses can outlast it, until that client's own timeout: see `EventProcessor`.
      * @param float $timeoutSeconds
      * @return void
      */

@@ -376,10 +376,18 @@ class EventProcessorTest extends TestCase
         $this->assertEquals(['add_to_cart'], array_column($processor->events, 'event'));
     }
 
-    public function testABatchTheEventsApiRejectsIsDroppedWithoutRetrying()
+    public static function rejectingStatusesProvider(): array
+    {
+        return ['400' => [400], '404' => [404], '413' => [413], '501' => [501], '505' => [505]];
+    }
+
+    /**
+     * @dataProvider rejectingStatusesProvider
+     */
+    public function testABatchTheEventsApiRejectsIsDroppedWithoutRetrying(int $status)
     {
         // Given
-        $processor = $this->processor($this->scriptedEventsApiClient([400]));
+        $processor = $this->processor($this->scriptedEventsApiClient([$status]));
         $processor->trackEvent('add_to_cart');
         $processor->flush();
 
@@ -489,6 +497,28 @@ class EventProcessorTest extends TestCase
         // Then
         $this->assertLessThan(1.5, microtime(true) - $started);
         fclose($server);
+    }
+
+    public function testCloseStartsNoRetryAfterItsTimeoutWithAnotherClient()
+    {
+        // Given a PSR-18 client that cannot be given a timeout, and gives up after its own
+        $client = $this->createMock(ClientInterface::class);
+        $client->method('sendRequest')
+            ->willReturnCallback(function ($request) {
+                $this->requests[] = $request;
+                usleep(300000);
+                throw new ConnectException('Timed out', $request);
+            });
+        $processor = new EventProcessor('env-key', client: $client);
+        $processor->trackEvent('checkout');
+        $started = microtime(true);
+
+        // When
+        $processor->close(0.2);
+
+        // Then
+        $this->assertCount(1, $this->requests);
+        $this->assertLessThan(1, microtime(true) - $started);
     }
 
     public function testCloseSendsTheBufferedEventsRetriesIncluded()
