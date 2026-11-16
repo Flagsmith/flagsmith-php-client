@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.4.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.3.0...v5.4.0) (2026-11-13)
+
+
+### Features
+
+* Retry event delivery and flush on close ([#158](https://github.com/Flagsmith/flagsmith-php-client/issues/158)) ([989290a](https://github.com/Flagsmith/flagsmith-php-client/commit/989290a490dc60780f119b1817aee8bfe6621a77))
+
 ## [5.3.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.2.0...v5.3.0) (2026-11-09)
 
 
