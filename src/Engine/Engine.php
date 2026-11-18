@@ -432,7 +432,7 @@ class Engine
                     && !str_contains($contextValue, $condition->value);
 
             case SegmentConditionOperator::REGEX:
-                return (bool) preg_match("/{$condition->value}/", (string) $contextValue);
+                return (bool) preg_match("/{$condition->value}/A", (string) $contextValue); // A: anchored at start, not full match
         }
 
         if ($contextValue === null) {
