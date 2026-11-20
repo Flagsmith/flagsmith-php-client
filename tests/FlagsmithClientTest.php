@@ -42,6 +42,7 @@ class FlagsmithClientTest extends TestCase
         $this->assertTrue($allFlags[0]->enabled);
         $this->assertEquals($allFlags[0]->value, 'some-value');
         $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
+        $this->assertEquals('STATIC', $allFlags[0]->getReason());
     }
 
     public function testGetEnvironmentFlagsUsesLocalContextWhenLocalEvaluationEnabled(): void
@@ -57,6 +58,7 @@ class FlagsmithClientTest extends TestCase
         $this->assertTrue($allFlags[0]->enabled);
         $this->assertEquals($allFlags[0]->value, 'some-value');
         $this->assertEquals($allFlags[0]->feature_name, 'some_feature');
+        $this->assertEquals('STATIC', $allFlags[0]->getReason());
     }
 
     public function testGetIdentityFlagsCallsApiWhenNoLocalEnvironmentNoTraits()
@@ -71,6 +73,7 @@ class FlagsmithClientTest extends TestCase
         $this->assertTrue($identityFlags[0]->enabled);
         $this->assertEquals($identityFlags[0]->value, 'some-value');
         $this->assertEquals($identityFlags[0]->feature_name, 'some_feature');
+        $this->assertEquals('STATIC', $identityFlags[0]->getReason());
     }
 
     public function testGetIdentityFlagsCallsApiWhenNoLocalEnvironmentWithTraits()
@@ -495,14 +498,17 @@ class FlagsmithClientTest extends TestCase
         $environmentFlag = $environmentFlags->getFlag('test_feature');
         $this->assertFalse($environmentFlag->enabled);
         $this->assertEquals('segment-override-value', $environmentFlag->value);
+        $this->assertEquals('TARGETING_MATCH; segment=Test segment with override', $environmentFlag->getReason());
 
         $environmentPremiumFlag = $environmentFlags->getFlag('premium_feature');
         $this->assertFalse($environmentPremiumFlag->enabled);
         $this->assertEquals('premium-default-value', $environmentPremiumFlag->value);
+        $this->assertEquals('STATIC', $environmentPremiumFlag->getReason()); // Its segment needs an identity
 
         $identityPremiumFlag = $identityFlags->getFlag('premium_feature');
         $this->assertTrue($identityPremiumFlag->enabled);
         $this->assertEquals('premium-override-value', $identityPremiumFlag->value);
+        $this->assertEquals('TARGETING_MATCH; segment=Premium users', $identityPremiumFlag->getReason());
     }
 
     private function identityInExperimentClient(): ClientInterface
@@ -547,6 +553,7 @@ class FlagsmithClientTest extends TestCase
         $this->assertTrue($flag->getEnabled());
         $this->assertEquals('hello treatment', $flag->getValue());
         $this->assertEquals('treatment', $flag->getVariant());
+        $this->assertNull($flag->getReason()); // Not in this response
         $this->assertEquals(7, $flag->getExperiment()->getId());
         $this->assertEquals('banner experiment', $flag->getExperiment()->getName());
         $this->assertTrue($flag->getExperiment()->getInExperiment());
