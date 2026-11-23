@@ -14,7 +14,12 @@ use Flagsmith\Models\Flags;
 
 function asSpecFlag(Flag $flag): array
 {
-    return ['feature' => $flag->getFeatureName(), 'enabled' => $flag->getEnabled(), 'value' => $flag->getValue()];
+    return [
+        'feature' => $flag->getFeatureName(),
+        'enabled' => $flag->getEnabled(),
+        'value' => $flag->getValue(),
+        'reason' => $flag->getReason(),
+    ];
 }
 
 function asSpecFlags(Flags $flags): array

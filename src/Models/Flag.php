@@ -10,6 +10,7 @@ class Flag extends BaseFlag
     public string $feature_name;
     public ?string $variant = null;
     public ?Experiment $experiment = null;
+    public ?string $reason = null;
 
     /**
      * Get the Feature Name
@@ -88,6 +89,25 @@ class Flag extends BaseFlag
     }
 
     /**
+     * Get the reason the flag was evaluated to its value, if known.
+     * @return string|null
+     */
+    public function getReason(): ?string
+    {
+        return $this->reason;
+    }
+
+    /**
+     * Build with the reason.
+     * @param string|null $reason
+     * @return Flag
+     */
+    public function withReason(?string $reason): self
+    {
+        return $this->with('reason', $reason);
+    }
+
+    /**
      * Build flag from dict.
      * @param object $flagDict
      * @return Flag
@@ -100,6 +120,7 @@ class Flag extends BaseFlag
             ->withEnabled($flagDict->enabled)
             ->withValue($flagDict->feature_state_value)
             ->withVariant($flagDict->variant ?? null)
+            ->withReason($flagDict->reason ?? null)
             ->withExperiment(Experiment::fromApiMetadata($flagDict->metadata ?? null));
     }
 }
