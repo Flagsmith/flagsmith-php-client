@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.5.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.4.0...v5.5.0) (2026-11-23)
+
+
+### Features
+
+* Every SDK includes `reason` in responses for identity and environment flags ([#161](https://github.com/Flagsmith/flagsmith-php-client/issues/161)) ([46c9f2a](https://github.com/Flagsmith/flagsmith-php-client/commit/46c9f2aad09a84a175e13a17e2df92dcddaa92f9))
+
 ## [5.4.0](https://github.com/Flagsmith/flagsmith-php-client/compare/v5.3.0...v5.4.0) (2026-11-13)
 
 
